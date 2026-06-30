@@ -227,7 +227,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ? Icons.mark_email_read_outlined 
                           : Icons.shield_outlined,
                   size: 80,
-                  color: Colors.blueAccent,
+                  color: Color(0xFF10B981),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -344,7 +344,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return ElevatedButton(
       onPressed: _isLoading ? null : onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Color(0xFF10B981),
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 0,
