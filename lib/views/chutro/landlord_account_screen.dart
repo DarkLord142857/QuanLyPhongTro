@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../chutro/landlord_tenant_screen.dart'; // Màn hình quản lý thông tin khách trọ đã làm từ trước
 import '../chutro/landlord_home_screen.dart';
+import '../chutro/landlord_invoice_screen.dart';
 import '../../views/auth/login_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
