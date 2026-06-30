@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -13,12 +14,20 @@ class LandlordInvoiceScreen extends StatefulWidget {
 class _LandlordInvoiceScreenState extends State<LandlordInvoiceScreen> {
   List<dynamic> _invoices = [];
   bool _isLoading = true;
-  final String _baseUrl = "http://10.0.2.2/www/myapi/"; // 🛠️ Thay URL của bạn
+  final String _baseUrl = "http://10.0.2.2/myapi/src/Controllers"; // 🛠️ Thay URL của bạn
 
   @override
   void initState() {
     super.initState();
     _fetchInvoices();
+  }
+
+// 🟢 HÀM ĐỊNH DẠNG TIỀN TỆ SỬ DỤNG INTL (Định dạng chính xác: 3.000.000 đ)
+  String _formatCurrency(dynamic amount) {
+    if (amount == null) return "0 đ";
+    final double value = double.tryParse(amount.toString()) ?? 0.0;
+    final formatter = NumberFormat("#,##0", "vi_VN");
+    return "${formatter.format(value).replaceAll(',', '.')} đ";
   }
 
   // 1. API: Lấy danh sách hóa đơn
@@ -93,6 +102,8 @@ class _LandlordInvoiceScreenState extends State<LandlordInvoiceScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
   }
 
+
+
   // Dialog nhập form chốt số điện nước mới hoặc sửa đổi
   void _openInvoiceFormDialog(dynamic invoice) {
     final isEdit = invoice != null;
@@ -159,7 +170,8 @@ class _LandlordInvoiceScreenState extends State<LandlordInvoiceScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Quản lý Hóa đơn Điện Nước"),
+        title: const Text("Quản lý hóa đơn phòng trọ"),
+        titleTextStyle: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
         backgroundColor: const Color(0xFF10B981),
       ),
       floatingActionButton: FloatingActionButton(
@@ -183,7 +195,12 @@ class _LandlordInvoiceScreenState extends State<LandlordInvoiceScreen> {
                           child: Icon(Icons.receipt_long, color: item['Status'] == 'DaThanhToan' ? Colors.green : Colors.orange),
                         ),
                         title: Text("Phòng ${item['RoomNumber']} - Kỳ ${item['Period']}", style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text("Tổng: ${item['TotalPrice']} đ | Còn nợ: ${item['Debt']} đ\nKhách: ${item['CustomerName']}"),
+                        // 🛠️ ĐÃ CẬP NHẬT: Thay đổi hiển thị số tiền qua hàm _formatCurrency để tạo định dạng 3.000.000 đ
+                        subtitle: Text(
+                          "Tổng: ${_formatCurrency(item['TotalPrice'])}\n"
+                          "Còn nợ: ${_formatCurrency(item['Debt'])}\n"
+                          "Khách: ${item['CustomerName'] ?? 'Chưa xác định'}"
+                        ),
                         isThreeLine: true,
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,

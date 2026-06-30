@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:quan_ly_phong_tro/views/chutro/landlord_payment_history_screen.dart';
 import '../chutro/landlord_tenant_screen.dart'; // Màn hình quản lý thông tin khách trọ đã làm từ trước
 import '../chutro/landlord_home_screen.dart';
 import '../chutro/landlord_invoice_screen.dart';
@@ -6,7 +7,7 @@ import '../../views/auth/login_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-class LandlordAccountScreen extends StatelessWidget {
+class LandlordAccountScreen extends StatefulWidget {
   final int landlordId;
 
   final VoidCallback? onLogout;
@@ -14,6 +15,52 @@ class LandlordAccountScreen extends StatelessWidget {
 
   const LandlordAccountScreen({super.key, required this.landlordId, this.onLogout, this.onBackHome});
 
+  @override
+  State<LandlordAccountScreen> createState() => _LandlordAccountScreenState();
+}
+
+class _LandlordAccountScreenState extends State<LandlordAccountScreen> {
+  String _landlordName = "Đang tải..."; // Tên mặc định hiển thị lúc chờ API
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLandlordName(); // Tự động gọi API khi mở màn hình
+  }
+
+// 🟢 HÀM GỌI API LẤY HỌ TÊN CHỦ TRỌ TỪ FILE GetLandlordInfo.php
+  Future<void> _fetchLandlordName() async {
+    try {
+      final String url = 'http://10.0.2.2/myapi/src/Controllers/GetLandlordInfo.php?id=${widget.landlordId}'; //[cite: 6, 7]
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body); //[cite: 6]
+
+        // Kiểm tra đúng cấu trúc success: true của file GetLandlordInfo.php[cite: 7]
+        if (responseData['success'] == true && responseData['data'] != null) { //[cite: 6, 7]
+          setState(() {
+            _landlordName = responseData['data']['FullName'] ?? 'Chưa đặt tên'; //[cite: 7]
+            _isLoading = false;
+          });
+          return;
+        }
+      }
+      _setFallbackName();
+    } catch (e) {
+      _setFallbackName();
+    }
+  }
+
+  // Tên dự phòng nếu API gặp sự cố hoặc mất kết nối mạng
+  void _setFallbackName() {
+    setState(() {
+      _landlordName = "Chủ trọ Hệ thống"; //[cite: 6]
+      _isLoading = false;
+    });
+  }
+    
 // 🔥 HÀM HIỂN THỊ HỘP THOẠI XÁC NHẬN ĐĂNG XUẤT
   void _showLogoutDialog(BuildContext context) {
     showDialog(
@@ -98,12 +145,12 @@ class LandlordAccountScreen extends StatelessWidget {
                     child: const Icon(Icons.person_pin_rounded, size: 50, color: Colors.white),
                   ),
                   const SizedBox(width: 16),
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text("Tài khoản Quản trị", style: TextStyle(color: Colors.white70, fontSize: 12)),
                       SizedBox(height: 4),
-                      Text("Chủ trọ Hệ thống", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(_landlordName, style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),maxLines: 1, overflow: TextOverflow.ellipsis),
                     ],
                   )
                 ],
@@ -118,12 +165,12 @@ class LandlordAccountScreen extends StatelessWidget {
               context: context,
               icon: Icons.electric_bolt_rounded,
               iconColor: Colors.amber,
-              title: "Quản lý hóa đơn điện nước",
+              title: "Quản lý hóa đơn phòng trọ",
               subtitle: "Ghi nhận chỉ số điện nước, tính tiền phòng hàng tháng",
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => _ManageInvoiceSubScreen(landlordId: landlordId)),
+                  MaterialPageRoute(builder: (context) => LandlordInvoiceScreen(landlordId: widget.landlordId)),
                 );
               },
             ),
@@ -133,12 +180,12 @@ class LandlordAccountScreen extends StatelessWidget {
               context: context,
               icon: Icons.paid_rounded,
               iconColor: Colors.green,
-              title: "Quản lý thanh toán tiền trọ",
+              title: "Quản lý thanh toán",
               subtitle: "Cập nhật phiếu thu, lịch sử nộp tiền trọ của khách",
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => _ManagePaymentSubScreen(landlordId: landlordId)),
+                  MaterialPageRoute(builder: (context) => LandlordPaymentHistoryScreen(landlordId: widget.landlordId)),
                 );
               },
             ),
@@ -156,7 +203,7 @@ class LandlordAccountScreen extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => LandlordTenantScreen(landlordId: landlordId)),
+                  MaterialPageRoute(builder: (context) => LandlordTenantScreen(landlordId: widget.landlordId)),
                 );
               },
             ),
@@ -174,7 +221,7 @@ class LandlordAccountScreen extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => _ProfileEditSubScreen(landlordId: landlordId)),
+                  MaterialPageRoute(builder: (context) => _ProfileEditSubScreen(landlordId: widget.landlordId)),
                 );
               },
             ),
@@ -190,8 +237,8 @@ class LandlordAccountScreen extends StatelessWidget {
               title: "Quay lại trang chủ", // Đổi tiêu đề trực quan
               subtitle: "Trở về màn hình chính của ứng dụng",
               onTap: () {
-                if(onBackHome!=null){
-                  onBackHome!();
+                if(widget.onBackHome!=null){
+                  widget.onBackHome!();
                 } else {
                   Navigator.pop(context);
                 }
@@ -259,129 +306,6 @@ class LandlordAccountScreen extends StatelessWidget {
   }
 }
 
-//Quản lý hóa đơn
-class _ManageInvoiceSubScreen extends StatelessWidget {
-  final int landlordId;
-  const _ManageInvoiceSubScreen({required this.landlordId});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(title: const Text("Hóa đơn Tiền trọ & Điện nước"), backgroundColor: const Color(0xFF10B981), foregroundColor: Colors.white),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Danh sách hóa đơn hàng tháng",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-            ),
-            const SizedBox(height: 12),
-            // Giả lập giao diện hiển thị danh sách hóa đơn đọc từ bảng HoaDon của bạn
-            Expanded(
-              child: ListView.builder(
-                itemCount: 2,
-                itemBuilder: (context, index) {
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(index == 0 ? "Phòng 101" : "Phòng 102", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: index == 0 ? Colors.red.withOpacity(0.1) : Colors.green.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                index == 0 ? "Chưa thanh toán" : "Đã thanh toán",
-                                style: TextStyle(color: index == 0 ? Colors.red : Colors.green, fontSize: 11, fontWeight: FontWeight.bold),
-                              ),
-                            )
-                          ],
-                        ),
-                        const Divider(height: 20),
-                        Text("Kỳ hóa đơn: Tháng 06/2026", style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-                        const SizedBox(height: 4),
-                        Text("Số điện: ${index == 0 ? '420 kWh -> 550 kWh' : '310 kWh -> 412 kWh'}", style: const TextStyle(fontSize: 13)),
-                        Text("Số nước: ${index == 0 ? '25 m3 -> 32 m3' : '18 m3 -> 24 m3'}", style: const TextStyle(fontSize: 13)),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text("Tổng cộng cần thu:", style: TextStyle(fontWeight: FontWeight.w500)),
-                            Text(
-                              index == 0 ? "3.450.000 đ" : "2.980.000 đ",
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.redAccent, fontSize: 15),
-                            ),
-                          ],
-                        )
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF10B981),
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.post_add_rounded),
-        onPressed: () {
-          // Tại đây chủ trọ sẽ mở Form nhập các thông số:
-          // PhongTroId, ThangNam, TienPhong, SoDienCu, SoDienMoi, SoNuocCu, SoNuocMoi để ghi nhận hóa đơn mới.
-        },
-      ),
-    );
-  }
-}
-
-// Quản lý thanh toán
-class _ManagePaymentSubScreen extends StatelessWidget {
-  final int landlordId;
-  const _ManagePaymentSubScreen({required this.landlordId});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(title: const Text("Lịch sử Thanh toán Tiền trọ"), backgroundColor: const Color(0xFF10B981), foregroundColor: Colors.white),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: 2,
-        itemBuilder: (context, index) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-            child: ListTile(
-              leading: const CircleAvatar(
-                backgroundColor: Color(0xFFE8F5E9),
-                child: Icon(Icons.check_circle_rounded, color: Colors.green),
-              ),
-              title: Text(index == 0 ? "Phòng 102 nộp tiền trọ" : "Phòng 105 nộp tiền trọ", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-              subtitle: Text("Ngày thu: 25/06/2026\nPhương thức: Chuyển khoản ngân hàng", style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-              trailing: Text(
-                index == 0 ? "+2.980.000đ" : "+3.100.000đ",
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 14),
-              ),
-              isThreeLine: true,
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
 
 class _ProfileEditSubScreen extends StatefulWidget {
   final int landlordId;

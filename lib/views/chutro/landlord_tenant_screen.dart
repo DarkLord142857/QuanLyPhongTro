@@ -423,7 +423,7 @@ class _LandlordTenantScreenState extends State<LandlordTenantScreen> {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A)),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () {
             if (widget.onBackHome != null) {
               widget.onBackHome!();

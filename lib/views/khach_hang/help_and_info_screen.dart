@@ -201,7 +201,7 @@ class HelpAndInfoScreen extends StatelessWidget {
                   ),
                   child: const Icon(Icons.phone_in_talk_rounded, color: Color(0xFFEF4444)),
                 ),
-                title: const Text("Hotline ban quản lý", style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                title: const Text("Hotline", style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
                 subtitle: const Text(
                   "0987.654.321",
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
