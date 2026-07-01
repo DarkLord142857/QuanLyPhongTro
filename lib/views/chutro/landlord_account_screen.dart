@@ -6,6 +6,8 @@ import '../chutro/landlord_invoice_screen.dart';
 import '../../views/auth/login_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../chutro/landlord_service_request_screen.dart';
+import '../chutro/landlord_manage_catalog_screen.dart';
 
 class LandlordAccountScreen extends StatefulWidget {
   final int landlordId;
@@ -196,18 +198,34 @@ class _LandlordAccountScreenState extends State<LandlordAccountScreen> {
               icon: Icons.plumbing_rounded, // Hoặc Icons.room_service_rounded
               iconColor: Colors.orange,
               title: "Quản lý yêu cầu dịch vụ",
-              subtitle: "Xem các yêu cầu sự cố điện nước, thiết bị từ khách thuê",
+              subtitle: "Tiếp nhận sự cố, báo giá & xuất hóa đơn",
               onTap: () {
-                // Navigator.push(
-                //   context,
-                //   MaterialPageRoute(
-                //     builder: (context) => LandlordServiceRequestScreen(landlordId: widget.landlordId),
-                //   ),
-                // );
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => LandlordServiceRequestScreen(landlordId: widget.landlordId),
+                  ),
+                );
               },
             ),
             const SizedBox(height: 12),
-
+            // 🟢 CHÈN THÊM MỤC NÀY: Quản lý yêu cầu dịch vụ từ khách thuê
+            _buildMenuItem(
+              context: context,
+              icon: Icons.request_quote_rounded, 
+              iconColor: Colors.yellow,
+              title: "Quản lý bảng giá dịch vụ",
+              subtitle: "Cấu hình thêm, sửa, xóa các dịch vụ danh mục dịch vụ mẫu",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => LandlordManageCatalogScreen(landlordId: widget.landlordId),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
             // KHỐI 4: QUẢN LÝ THÔNG TIN KHÁCH TRỌ (Liên kết bảng Users có Role = 'KhachHang' và bảng HopDongThue)
             _buildMenuHeader("VẬN HÀNH & NHÂN SỰ"),
             _buildMenuItem(

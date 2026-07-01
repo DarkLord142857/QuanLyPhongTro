@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http; // Thư viện gọi API
 import 'dart:convert'; // Xử lý giải mã chuỗi JSON
 import '../../../data/models/landlord_dashboard_model.dart';
 import '../chutro/add_notification_screen.dart'; 
+import '../chutro/landlord_service_request_screen.dart';
 
 class LandlordHomeScreen extends StatefulWidget {
   final int userId; // Truyền id chủ trọ sau khi đăng nhập thành công vào đây
@@ -186,7 +187,7 @@ class _LandlordHomeScreenState extends State<LandlordHomeScreen> {
               data.yeuCauMoi.isEmpty
                   ? _buildEmptyWidget("Không có sự cố hay yêu cầu dịch vụ nào cần xử lý.")
                   : SizedBox(
-                      height: 170,
+                      height: 150,
                       child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       shrinkWrap: true,
@@ -197,27 +198,45 @@ class _LandlordHomeScreenState extends State<LandlordHomeScreen> {
                         final int status = int.tryParse((yc as dynamic).trangThai?.toString() ?? '0') ?? 0;
                         final bool isNotProcessed = status == 0;
                         final int ycId = (yc as dynamic).id ?? 0;
-
-                        return Container(
+                        return InkWell(
+                        // Nhấp vào thẻ bất kì sẽ dẫn sang màn hình quản lý chi tiết
+                        onTap: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => LandlordServiceRequestScreen(landlordId: widget.userId),
+                            ),
+                          );
+                          // Nếu bên màn hình quản lý có cập nhật trạng thái sự cố, tự động làm mới Home Screen
+                          if (result == true) {
+                            _handleRefresh();
+                          }
+                        },
+                        child: Container(
                           width: MediaQuery.of(context).size.width * 0.8, 
                           margin: const EdgeInsets.only(right: 12, bottom: 4, top: 4),
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            // Chưa xử lý -> Hiện màu cam nổi bật. Đã xử lý -> Nền trắng thanh lịch
-                            color: isNotProcessed ? const Color(0xFFFFF7ED) : Colors.white,
+                           // Thay đổi màu nền hộp thẻ theo từng trạng thái cụ thể
+                            color: status == 0 
+                                ? const Color(0xFFFFF7ED) // Cam nhạt cho Chưa xử lý
+                                : (status == 1 ? const Color(0xFFFEFCE8) : Colors.white), // Vàng nhạt / Trắng
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: isNotProcessed ? const Color(0xFFFFEDD5) : const Color(0xFFF1F5F9),
-                              width: isNotProcessed ? 1.5 : 1.0,
+                              color: status == 0 
+                                  ? const Color(0xFFFFEDD5) 
+                                  : (status == 1 ? const Color(0xFFFEF08A) : const Color(0xFFF1F5F9)),
+                              width: status == 2 ? 1.0 : 1.5,
                             ),
                             boxShadow: [
                               BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6, offset: const Offset(0, 2))
-                            ], 
+                            ],
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Icon(Icons.build_rounded, color: isNotProcessed ? Colors.orange : const Color(0xFF94A3B8), size: 18),
                                   const SizedBox(width: 8),
@@ -237,6 +256,7 @@ class _LandlordHomeScreenState extends State<LandlordHomeScreen> {
                                 ],
                               ),
                               const SizedBox(height: 6),
+
                               Text("Người gửi: ${(yc as dynamic).tenKhachHang ?? 'Khách thuê'}", style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
                               const SizedBox(height: 4),
                               Expanded( // 👈 Đã thêm: Bọc bằng Expanded để tránh lỗi tràn chiều cao card
@@ -248,83 +268,84 @@ class _LandlordHomeScreenState extends State<LandlordHomeScreen> {
                                     ),
                                   ),
                               const SizedBox(height: 12),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(yc.ngayGui, style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
-                                  if (isNotProcessed && (yc as dynamic).trangThai == 0 && ycId > 0)
-                                SizedBox(
-                                  height: 32,
-                                  child: TextButton.icon(
-                                  onPressed: () async {
-                                    // Gọi đến API chuyên trách xử lý yêu cầu dịch vụ của chủ trọ
-                                    final String url = 'http://10.0.2.2/myapi/src/Controllers/ApproveServiceRequest.php';
-                                    try {
-                                      final res = await http.post(
-                                        Uri.parse(url),
-                                        headers: {"Content-Type": "application/json"},
-                                        body: json.encode({"id": ycId}),
-                                      );
+                              // Row(
+                              //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              //   children: [
+                              //     Text(yc.ngayGui, style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+                              //     if (isNotProcessed && (yc as dynamic).trangThai == 0 && ycId > 0)
+                              //   SizedBox(
+                              //     height: 32,
+                              //     child: TextButton.icon(
+                              //     onPressed: () async {
+                              //       // Gọi đến API chuyên trách xử lý yêu cầu dịch vụ của chủ trọ
+                              //       final String url = 'http://10.0.2.2/myapi/src/Controllers/ApproveServiceRequest.php';
+                              //       try {
+                              //         final res = await http.post(
+                              //           Uri.parse(url),
+                              //           headers: {"Content-Type": "application/json"},
+                              //           body: json.encode({"id": ycId}),
+                              //         );
                                       
-                                      if (res.statusCode == 200) {
-                                        final resData = json.decode(res.body);
-                                        if (resData['status'] == 'success') {
+                              //         if (res.statusCode == 200) {
+                              //           final resData = json.decode(res.body);
+                              //           if (resData['status'] == 'success') {
                                           
-                                          if (mounted) {
-                                            setState(() {
-                                              // 1. Cập nhật trực tiếp trạng thái của biến 'yc' hiện tại lên 1
-                                              // Lệnh này giúp nút biến mất và Badge "Đã xong" hiện lên ngay lập tức!
-                                              try {
-                                                (yc as dynamic).trangThai = 1;
-                                              } catch (e) {
-                                                print("Lỗi gán trangThai: $e");
-                                              }
-                                            });
-                                          }
+                              //             if (mounted) {
+                              //               setState(() {
+                              //                 // 1. Cập nhật trực tiếp trạng thái của biến 'yc' hiện tại lên 1
+                              //                 // Lệnh này giúp nút biến mất và Badge "Đã xong" hiện lên ngay lập tức!
+                              //                 try {
+                              //                   (yc as dynamic).trangThai = 1;
+                              //                 } catch (e) {
+                              //                   print("Lỗi gán trangThai: $e");
+                              //                 }
+                              //               });
+                              //             }
 
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('✅ Đã xác nhận xử lý yêu cầu thành công!'), 
-                                              backgroundColor: Color(0xFF10B981),
-                                              behavior: SnackBarBehavior.floating,
-                                            )
-                                          );
+                              //             ScaffoldMessenger.of(context).showSnackBar(
+                              //               const SnackBar(
+                              //                 content: Text('✅ Đã xác nhận xử lý yêu cầu thành công!'), 
+                              //                 backgroundColor: Color(0xFF10B981),
+                              //                 behavior: SnackBarBehavior.floating,
+                              //               )
+                              //             );
                                           
-                                          // Kéo lại dữ liệu từ server Laragon để đồng bộ vĩnh viễn
-                                          _handleRefresh(); 
-                                        }
-                                      }
-                                    } catch (e) {
-                                      print("Lỗi kết nối: $e");
-                                    }
-                                  },
-                                  // 🔥 ĐÃ THÊM: Cấu hình để TextButton có màu nền đậm và chữ trắng
-                                style: TextButton.styleFrom(
-                                  backgroundColor: const Color(0xFF059669), // Màu xanh lá đậm (Emerald 600)
-                                  foregroundColor: Colors.white,            // Đổi màu chữ và icon thành Màu trắng để nổi bật trên nền đậm
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Khoảng cách đệm bên trong nút
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12), // Bo góc nút bấm cho đẹp và đồng bộ
-                                  ),
-                                ),
-                                  icon: const Icon(Icons.check_circle_outline, size: 18),
-                                  label: const Text(
-                                    "Xác nhận", 
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                  ),
-                                ),
-                                )
-                              else
-                                // Hiển thị text trạng thái nhỏ bên phải nếu dòng này ban đầu đã là "Đã xong"
-                                const Padding(
-                                  padding: EdgeInsets.only(right: 8.0),
-                                  child: Text("Đã xử lý", style: TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic)),
-                                ),                        
+                              //             // Kéo lại dữ liệu từ server Laragon để đồng bộ vĩnh viễn
+                              //             _handleRefresh(); 
+                              //           }
+                              //         }
+                              //       } catch (e) {
+                              //         print("Lỗi kết nối: $e");
+                              //       }
+                              //     },
+                              //     // 🔥 ĐÃ THÊM: Cấu hình để TextButton có màu nền đậm và chữ trắng
+                              //   style: TextButton.styleFrom(
+                              //     backgroundColor: const Color(0xFF059669), // Màu xanh lá đậm (Emerald 600)
+                              //     foregroundColor: Colors.white,            // Đổi màu chữ và icon thành Màu trắng để nổi bật trên nền đậm
+                              //     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Khoảng cách đệm bên trong nút
+                              //     shape: RoundedRectangleBorder(
+                              //       borderRadius: BorderRadius.circular(12), // Bo góc nút bấm cho đẹp và đồng bộ
+                              //     ),
+                              //   ),
+                              //     icon: const Icon(Icons.check_circle_outline, size: 18),
+                              //     label: const Text(
+                              //       "Xác nhận", 
+                              //       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              //     ),
+                              //   ),
+                              //   )
+                              // else
+                              //   // Hiển thị text trạng thái nhỏ bên phải nếu dòng này ban đầu đã là "Đã xong"
+                              //   const Padding(
+                              //     padding: EdgeInsets.only(right: 8.0),
+                              //     child: Text("Đã xử lý", style: TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic)),
+                              //   ),                        
                                 
-                                ],
-                              ),
+                              //   ],
+                              // ),
                             ],
                           ),
+                        ),
                         );
                       },
                     ),

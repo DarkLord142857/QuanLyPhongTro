@@ -49,7 +49,7 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Tạo Thông Báo Mới"), backgroundColor: const Color(0xFF10B981)),
+      appBar: AppBar(title: const Text("Tạo Thông Báo Mới"), backgroundColor: const Color(0xFF10B981), foregroundColor: Colors.white),
       body: _isSending 
           ? const Center(child: CircularProgressIndicator())
           : Padding(
