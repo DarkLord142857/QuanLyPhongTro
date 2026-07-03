@@ -486,7 +486,7 @@ class _AdminRoomsScreenState extends State<AdminRoomsScreen> {
               itemCount: rooms.length,
               itemBuilder: (context, index) {
                 final room = rooms[index];
-                final bool isOccupied = room.isActive == 1 || room.khachThue != null; 
+                final bool isOccupied = room.trangThai == 1 || room.khachThue != null; 
                 
                 return Container(
                   margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), 

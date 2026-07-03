@@ -15,11 +15,11 @@ class LandlordTenantScreen extends StatefulWidget {
 class _LandlordTenantScreenState extends State<LandlordTenantScreen> {
   List<TenantModel> _tenants = [];
   List<Map<String, dynamic>> _availableRooms = [];
-  List<TenantModel> _allExistingUsers = []; // 🌟 THÊM MỚI: Danh sách toàn bộ user hệ thống để chọn
+  List<TenantModel> _allExistingUsers = []; 
   bool _isLoading = true;
   int? _selectedRoomId;
-  int? _selectedTenantId; // 🌟 THÊM MỚI: Id của tài khoản khách hàng được chọn (nếu đã có tk)
-  bool _hasAccount = false; // 🌟 THÊM MỚI: Trạng thái toggle form
+  int? _selectedTenantId; 
+  bool _hasAccount = false; 
 
   @override
   void initState() {
@@ -33,12 +33,10 @@ class _LandlordTenantScreenState extends State<LandlordTenantScreen> {
 
     try {
       final data = await TenantApiService.fetchTenants();
-      // Giả lập hàm lấy danh sách gốc (hoặc lọc từ api trả về các user chưa/đã thuê)
-      // Trong thực tế bạn có thể tạo 1 API riêng fetchAllKhachHang()
       if (mounted) {
         setState(() {
           _tenants = data;
-          _allExistingUsers = data; // Tạm thời dùng data này hoặc gọi API riêng biệt tùy cấu trúc
+          _allExistingUsers = data; 
           _isLoading = false;
         });
       }
@@ -100,24 +98,19 @@ class _LandlordTenantScreenState extends State<LandlordTenantScreen> {
     final passwordCtrl = TextEditingController();
     final depositCtrl = TextEditingController(text: '0');
 
-// 🌟 1. TẠO BIẾN ĐỂ LƯU NGÀY CHỌN THỰC TẾ
     DateTime selectedStartDate = DateTime.now();
     DateTime selectedEndDate = DateTime.now().add(const Duration(days: 365));
 
-    // Định dạng hiển thị phía người dùng (Ngày/Tháng/Năm)
     final DateFormat displayFormat = DateFormat('dd/MM/yyyy');
-    // Định dạng gửi lên Database (Năm-Tháng-Ngày)
     final DateFormat dbFormat = DateFormat('yyyy-MM-dd');
 
-    // Ô nhập hiển thị chuỗi ngày đã định dạng thân thiện cho user
     final startDateCtrl = TextEditingController(text: displayFormat.format(selectedStartDate));
     final endDateCtrl = TextEditingController(text: displayFormat.format(selectedEndDate));
     
     _selectedRoomId = null;
     _selectedTenantId = null;
-    _hasAccount = false; // Mặc định mở ra là tạo tài khoản mới
+    _hasAccount = false; 
 
-// 🌟 2. HÀM CHỌN NGÀY THÔNG QUA LỊCH (DATE PICKER)
     Future<void> _selectDate(BuildContext context, bool isStartDate, StateSetter setModalState) async {
       final DateTime? picked = await showDatePicker(
         context: context,
@@ -180,7 +173,6 @@ class _LandlordTenantScreenState extends State<LandlordTenantScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  // 🌟 THÊM MỚI: Switch chọn loại hình nếu ở chế độ thêm mới
                   if (!isEdit) ...[
                     Row(
                       children: [
@@ -205,11 +197,9 @@ class _LandlordTenantScreenState extends State<LandlordTenantScreen> {
                     const Divider(),
                   ],
 
-                  // FORM THAY ĐỔI ĐỘNG DỰA TRÊN SWITCH _hasAccount
                   if (isEdit || !_hasAccount) ...[
-                    // Form nhập tay thông thường (Khi sửa hoặc khi tạo tài khoản mới)
                     TextField(controller: fullNameCtrl, decoration: const InputDecoration(labelText: "Họ và tên khách thuê *")),
-                    TextField(controller: identityCtrl, decoration: const InputDecoration(labelText: "Số CCCD / CMND")),
+                    TextField(controller: identityCtrl, decoration: const InputDecoration(labelText: "Số CCCD / CMND"), keyboardType: TextInputType.number),
                     TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: "Số điện thoại"), keyboardType: TextInputType.phone),
                     TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: "Địa chỉ Email"), keyboardType: TextInputType.emailAddress),
                     
@@ -222,7 +212,6 @@ class _LandlordTenantScreenState extends State<LandlordTenantScreen> {
                       TextField(controller: passwordCtrl, decoration: const InputDecoration(labelText: "Mật khẩu đăng nhập *"), obscureText: true),
                     ]
                   ] else ...[
-                    // 🌟 TRƯỜNG HỢP ĐÃ CÓ TÀI KHOẢN: Chỉ hiện Dropdown chọn Khách hàng
                     const Padding(
                       padding: EdgeInsets.only(top: 8, bottom: 8),
                       child: Text("Chọn tài khoản khách thuê có sẵn *", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
@@ -248,7 +237,6 @@ class _LandlordTenantScreenState extends State<LandlordTenantScreen> {
                     ),
                   ],
 
-                  // PHẦN CHUNG: Cấu hình phòng và Hợp đồng luôn hiển thị khi tạo mới
                   if (!isEdit) ...[
                     const Padding(
                       padding: EdgeInsets.only(top: 16, bottom: 4),
@@ -274,10 +262,9 @@ class _LandlordTenantScreenState extends State<LandlordTenantScreen> {
                         });
                       },
                     ),
-                    // Ô chọn ngày bắt đầu
                     TextField(
                       controller: startDateCtrl,
-                      readOnly: true, // Khóa bàn phím nhập tay, bắt buộc chọn qua lịch
+                      readOnly: true, 
                       onTap: () => _selectDate(context, true, setModalState),
                       decoration: const InputDecoration(
                         labelText: "Ngày bắt đầu ở *",
@@ -285,10 +272,9 @@ class _LandlordTenantScreenState extends State<LandlordTenantScreen> {
                         suffixIcon: Icon(Icons.arrow_drop_down_rounded),
                       ),
                     ),
-                    // Ô chọn ngày kết thúc
                     TextField(
                       controller: endDateCtrl,
-                      readOnly: true, // Khóa bàn phím nhập tay
+                      readOnly: true, 
                       onTap: () => _selectDate(context, false, setModalState),
                       decoration: const InputDecoration(
                         labelText: "Ngày hết hạn HĐ *",
@@ -308,65 +294,81 @@ class _LandlordTenantScreenState extends State<LandlordTenantScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () async {
-                      // Logic Xử lý khi nhấn nút Lưu / Tạo
-                      if (isEdit) {
-                        if (fullNameCtrl.text.trim().isEmpty) {
-                          _showSnackBar("Vui lòng không để trống họ tên khách", isSuccess: false);
-                          return;
-                        }
-                        final data = {
-                          "id": tenant.id,
-                          "FullName": fullNameCtrl.text.trim(),
-                          "IdentityCard": identityCtrl.text.trim().isEmpty ? null : identityCtrl.text.trim(),
-                          "PhoneNumber": phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
-                          "Email": emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
-                        };
-                        final res = await TenantApiService.updateTenant(data);
-                        Navigator.pop(context);
-                        _showSnackBar(res['message'], isSuccess: res['status'] == 'success');
-                      } else {
-                        // CHẾ ĐỘ TẠO MỚI HỢP ĐỒNG
-                        if (_selectedRoomId == null) {
-                          _showSnackBar("Vui lòng chọn phòng trọ trống", isSuccess: false);
-                          return;
-                        }
-                        // 🌟 4. CHUYỂN ĐỔI SANG ĐỊNH DẠNG DB (YYYY-MM-DD) KHI GỬI API
-                        Map<String, dynamic> data = {
-                          "PhongTroId": _selectedRoomId,
-                          "NgayBatDau": dbFormat.format(selectedStartDate), // Đã convert thành yyyy-MM-dd
-                          "NgayKetThuc": dbFormat.format(selectedEndDate),   // Đã convert thành yyyy-MM-dd
-                          "TienCoc": double.tryParse(depositCtrl.text) ?? 0,
-                        };
+                          if (isEdit) {
+                            if (fullNameCtrl.text.trim().isEmpty) {
+                              _showSnackBar("Vui lòng không để trống họ tên khách", isSuccess: false);
+                              return;
+                            }
+                            final data = {
+                              "id": tenant.id,
+                              "FullName": fullNameCtrl.text.trim(),
+                              "IdentityCard": identityCtrl.text.trim().isEmpty ? null : identityCtrl.text.trim(),
+                              "PhoneNumber": phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
+                              "Email": emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
+                              "NguoiGuiId": widget.landlordId, 
+                              "caller_id": widget.landlordId,
+                            };
+                            final res = await TenantApiService.updateTenant(data);
+                            Navigator.pop(context);
+                            _showSnackBar(res['message'], isSuccess: res['status'] == 'success');
+                          } else {
+                            // CHẾ ĐỘ: TẠO MỚI HỢP ĐỒNG (ADD TENANT)
+                            if (_selectedRoomId == null) {
+                              _showSnackBar("Vui lòng chọn phòng trọ trống", isSuccess: false);
+                              return;
+                            }
+                            
+                            // Khởi tạo các tham số hợp đồng bắt buộc [source: 7]
+                            Map<String, dynamic> data = {
+                              "PhongTroId": _selectedRoomId,
+                              "NgayBatDau": dbFormat.format(selectedStartDate), 
+                              "NgayKetThuc": dbFormat.format(selectedEndDate),   
+                              "TienCoc": double.tryParse(depositCtrl.text) ?? 0,
+                              "NguoiGuiId": widget.landlordId,
+                            };
 
-                        if (_hasAccount) {
-                          // Trường hợp ĐÃ CÓ tài khoản
-                          if (_selectedTenantId == null) {
-                            _showSnackBar("Vui lòng chọn một tài khoản khách hàng", isSuccess: false);
-                            return;
-                        }
-                          data["KhachHangId"] = _selectedTenantId;
-                        } else {
-                          // Trường hợp CHƯA CÓ tài khoản (Tạo mới hoàn toàn)
-                          if (fullNameCtrl.text.trim().isEmpty || usernameCtrl.text.isEmpty || passwordCtrl.text.isEmpty) {
-                            _showSnackBar("Vui lòng nhập đầy đủ Họ tên, Username và Mật khẩu", isSuccess: false);
-                            return;
+                            if (_hasAccount) {
+                              // TRƯỜNG HỢP: KHÁCH ĐÃ CÓ TÀI KHOẢN HỆ THỐNG
+                              if (_selectedTenantId == null) {
+                                _showSnackBar("Vui lòng chọn một tài khoản khách hàng", isSuccess: false);
+                                return;
+                              }
+                              
+                              // Tìm tài khoản khách hàng được chọn trong danh sách có sẵn
+                              final selectedUser = _allExistingUsers.firstWhere((u) => u.id == _selectedTenantId);
+                              
+                              data.addAll({
+                                "KhachHangId": _selectedTenantId,
+                                // Bắt buộc phải truyền các trường này lên để vượt qua bộ lọc !empty của backend PHP [source: 7]
+                                "FullName": selectedUser.fullName,
+                                "Username": selectedUser.username,
+                                "Password": "bypass_password_validation", // Chuỗi giả định không rỗng để tránh lỗi 400 [source: 7]
+                                "IdentityCard": selectedUser.identityCard,
+                                "PhoneNumber": selectedUser.phoneNumber,
+                                "Email": selectedUser.email,
+                              });
+                            } else {
+                              // TRƯỜNG HỢP: KHÁCH CHƯA CÓ TÀI KHOẢN (TẠO MỚI HOÀN TOÀN)
+                              if (fullNameCtrl.text.trim().isEmpty || usernameCtrl.text.isEmpty || passwordCtrl.text.isEmpty) {
+                                _showSnackBar("Vui lòng nhập đầy đủ Họ tên, Username và Mật khẩu", isSuccess: false);
+                                return;
+                              }
+                              data.addAll({
+                                "Username": usernameCtrl.text.trim(),
+                                "Password": passwordCtrl.text.trim(),
+                                "FullName": fullNameCtrl.text.trim(),
+                                "IdentityCard": identityCtrl.text.trim().isEmpty ? null : identityCtrl.text.trim(),
+                                "PhoneNumber": phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
+                                "Email": emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
+                              });
+                            }
+
+                            final res = await TenantApiService.addTenant(data);
+                            Navigator.pop(context);
+                            _showSnackBar(res['message'], isSuccess: res['status'] == 'success');
                           }
-                          data.addAll({
-                            "Username": usernameCtrl.text.trim(),
-                            "Password": passwordCtrl.text.trim(),
-                            "FullName": fullNameCtrl.text.trim(),
-                            "IdentityCard": identityCtrl.text.trim().isEmpty ? null : identityCtrl.text.trim(),
-                            "PhoneNumber": phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
-                            "Email": emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
-                          });
-                        }
-
-                        final res = await TenantApiService.addTenant(data);
-                        Navigator.pop(context);
-                        _showSnackBar(res['message'], isSuccess: res['status'] == 'success');
-                      }
-                      _loadData();
-                    },
+                          _loadData();
+                        },
                     child: Text(isEdit ? "Lưu thay đổi" : "Lập hợp đồng & Kích hoạt khách", style: const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(height: 24),

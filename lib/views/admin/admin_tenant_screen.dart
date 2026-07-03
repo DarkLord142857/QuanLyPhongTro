@@ -73,7 +73,8 @@ class _AdminTenantScreenState extends State<AdminTenantScreen> {
         content: Text("Xác nhận xóa khách hàng '${tenant.fullName}'?"),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
-          TextButton(
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
             onPressed: () async {
               Navigator.pop(context);
               final res = await TenantApiService.deleteTenant(tenant.id, widget.landlordId);

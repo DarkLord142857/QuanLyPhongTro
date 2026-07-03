@@ -53,13 +53,17 @@ class TenantApiService {
     try {
       final response = await http.delete(
         Uri.parse('$baseUrl/DeleteTenant.php'),
-        headers: {"Content-Type": "application/json"},
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Caller-Id': nguoiXoaId.toString(), // 🟢 ĐÍNH KÈM ID NGƯỜI XÓA VÀO HEADER
+        },
         body: json.encode({
           "KhachHangId": khachHangId,
           "NguoiXoaId": nguoiXoaId,
         }),
       );
-      return json.decode(response.body);
+      final data = json.decode(response.body);
+      return response.statusCode == 200 ? data : {"status": "error", "message": "Lỗi từ máy chủ PHP."};
     } catch (e) {
       return {"status": "error", "message": "Lỗi kết nối máy chủ PHP."};
     }

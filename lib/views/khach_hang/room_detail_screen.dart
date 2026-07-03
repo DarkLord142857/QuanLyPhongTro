@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart'; // 🔥 Thêm thư viện này ở đầu file
 import 'dart:convert';
+import 'dart:typed_data';
 
 class RoomDetailScreen extends StatefulWidget {
   final int roomId;
@@ -16,11 +17,18 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
   Map<String, dynamic>? _roomDetail;
   String _errorMessage = '';
   int _currentImageIndex = 0;
+  final PageController _pageController = PageController();
 
   @override
   void initState() {
     super.initState();
     _fetchRoomDetail();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchRoomDetail() async {
@@ -51,6 +59,22 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
 
   String _formatCurrency(double amount) {
     return '${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} đ';
+  }
+
+  /// 🛠️ An toàn xử lý Images có thể là String, List, hoặc null
+  List<dynamic> _parseImagesList(dynamic imagesData) {
+    if (imagesData == null) return [];
+    
+    // Nếu đã là List rồi
+    if (imagesData is List) return imagesData;
+    
+    // Nếu là String đơn lẻ, bọc nó trong một List
+    if (imagesData is String) {
+      return imagesData.trim().isEmpty ? [] : [imagesData.trim()];
+    }
+    
+    // Các trường hợp khác, trả về List rỗng
+    return [];
   }
 
 // 🛠️ HÀM HIỂN THỊ BOTTOM SHEET THÔNG TIN CHỦ TRỌ
@@ -107,7 +131,8 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
     final int landlordId = room['MaQL'] != null ? int.tryParse(room['MaQL'].toString()) ?? 2 : 2;
 
     // Ép kiểu mảng an toàn không lo null cho hình ảnh và thuộc tính tiện ích tiện nghi
-    final List<dynamic> images = room['Images'] ?? [];
+    final detail = _roomDetail!;
+    final List<dynamic> imagesList = _parseImagesList(detail['Images']); // An toàn xử lý cả String và List
     final List<dynamic> attributes = room['Attributes'] ?? [];
 
     return Scaffold(
@@ -127,65 +152,78 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
               background: Stack(
                 children: [
                   // Slider hiển thị danh sách hình ảnh từ API
-                  images.isNotEmpty
+                  imagesList.isNotEmpty
                       ? PageView.builder(
-                        itemCount: images.length,
+                        controller: _pageController,
+                        itemCount: imagesList.length,
                         onPageChanged: (index) {
                           setState(() {
                             _currentImageIndex = index;
                           });
                         },
                         itemBuilder: (context, index) {
-                          final imageUrl = images[index].toString(); // Đảm bảo ép kiểu chuỗi URL sạch từ API
-                          return Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            // 🔥 CHẶN LỖI: Nếu server Laragon từ chối kết nối, hiển thị widget thay thế thay vì sập app
-                            errorBuilder: (BuildContext context, Object exception, StackTrace? stackTrace) {
-                              return Container(
-                                color: const Color(0xFFF1F5F9),
-                                alignment: Alignment.center,
-                                child: const Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.cloud_off_outlined, size: 40, color: Color(0xFF94A3B8)),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      "Không thể kết nối Server ảnh",
-                                      style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          );
+                          final String rawData = imagesList[index].toString().trim();
+                          // 1. Kiểm tra nếu là đường dẫn URL (bắt đầu bằng http)
+                          if(rawData.isEmpty){
+                            return _buildDetailPlaceholder();
+                          }
+                          // TRƯỜNG HỢP A: Chuỗi gửi lên là link URL trực tiếp (không mã hóa)
+                          if (rawData.startsWith('http')) {
+                            return Image.network(
+                              rawData,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              errorBuilder: (context, error, stackTrace) => _buildDetailPlaceholder(),
+                            );
+                          }
+                          // TRƯỜNG HỢP B: Chuỗi là mã hóa Base64
+                              try {
+                                // Giải mã Base64 ra mảng byte trước
+                                final Uint8List decodedBytes = base64Decode(rawData);
+                                
+                                // Thử dịch ngược mảng byte xem nội dung bên trong có phải là văn bản dạng URL hay không
+                                final String decodedText = utf8.decode(decodedBytes).trim();
+
+                                if (decodedText.startsWith('http')) {
+                                  // Nếu dịch ra là một link HTTP, dùng Image.network để tải ảnh từ Web
+                                  return Image.network(
+                                    decodedText,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    errorBuilder: (context, error, stackTrace) => _buildDetailPlaceholder(),
+                                  );
+                                }
+                              } catch (e) {
+                                // Nếu lệnh utf8.decode lỗi -> Chứng tỏ đây là dữ liệu byte ảnh nhị phân thực tế (VARBINARY)
+                              }
+                              // TRƯỜNG HỢP C: Hiển thị dữ liệu ảnh nhị phân thực tế qua Image.memory
+                              try {
+                                return Image.memory(
+                                  base64Decode(rawData),
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  errorBuilder: (context, error, stackTrace) => _buildDetailPlaceholder(),
+                                );
+                              } catch (e) {
+                                // Phòng ngừa chuỗi lỗi cấu trúc không thể decode
+                                return _buildDetailPlaceholder();
+                              }
+
                         },
                       )
-                      : Container(
-                          color: const Color(0xFFEFF6FF),
-                          width: double.infinity,
-                          child: const Icon(Icons.maps_home_work_rounded, size: 80, color: Color(0xFF2563EB)),
-                        ),
+                      : _buildDetailPlaceholder(),
                   // Điểm chấm tròn báo vị trí ảnh (Dots Indicator)
-                  if (images.length > 1)
+                  if (imagesList.isNotEmpty)
                     Positioned(
-                      bottom: 20,
-                      left: 0,
-                      right: 0,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(
-                          images.length,
-                          (index) => Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            width: _currentImageIndex == index ? 20 : 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(4),
-                              color: _currentImageIndex == index ? const Color(0xFF2563EB) : Colors.white.withOpacity(0.6),
-                            ),
-                          ),
+                      bottom: 16,
+                      right: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.65),
+                          borderRadius: BorderRadius.circular(20),
                         ),
+                        child: Text("${_currentImageIndex + 1}/${imagesList.length}", style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                       ),
                     ),
                 ],
@@ -626,3 +664,28 @@ class _LandlordInfoWidgetState extends State<_LandlordInfoWidget> {
       ),
     );
   }
+
+  Widget _buildDetailPlaceholder() {
+  return Container(
+    color: const Color(0xFFF1F5F9), // Màu nền xám nhạt hiện đại
+    width: double.infinity,
+    height: double.infinity,
+    child: const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.image_not_supported_rounded, 
+            size: 48, 
+            color: Color(0xFF94A3B8),
+          ),
+          SizedBox(height: 8),
+          Text(
+            "Hình ảnh phòng đang cập nhật",
+            style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+          )
+        ],
+      ),
+    ),
+  );
+}

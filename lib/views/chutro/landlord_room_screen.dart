@@ -18,6 +18,8 @@ class _LandlordRoomsScreenState extends State<LandlordRoomsScreen> {
   late Future<List<RoomTenantModel>> _roomsFuture;
   final String baseUrl = 'http://10.0.2.2/myapi/src/Controllers';
   final ImagePicker _picker = ImagePicker();
+  bool _isPickingImages = false;
+  final String _currentUserId = '1'; // Giả sử ID người dùng hiện tại là 1, bạn có thể thay đổi theo logic của bạn
 
   @override
   void initState() {
@@ -43,6 +45,7 @@ class _LandlordRoomsScreenState extends State<LandlordRoomsScreen> {
           List data = res['data'];
           return data.map((item) => RoomTenantModel.fromJson(item)).toList();
         }
+        _refreshData();
       }
       throw Exception("Mã lỗi từ máy chủ: ${response.statusCode}");
     } catch (e) {
@@ -56,12 +59,17 @@ class _LandlordRoomsScreenState extends State<LandlordRoomsScreen> {
       var uri = Uri.parse('$baseUrl/CreateRoom.php');
       var request = http.MultipartRequest('POST', uri);
 
+      request.headers.addAll({
+        'X-User-Id': _currentUserId,
+        'X-Caller-Id': _currentUserId,
+      });
+
       request.fields['NhaTroId'] = '1'; 
       request.fields['SoPhong'] = soPhong;
       request.fields['GiaPhong'] = giaPhong.toStringAsFixed(0);
       request.fields['SoNguoiToiDa'] = soNguoi.toString();
       request.fields['SoLuongXeToiDa'] = soXe.toString();
-      
+      request.fields['NguoiGuiId'] = _currentUserId;
       // 🔥 GỬI CHUỖI THUỘC TÍNH JSON LÊN PHP
       request.fields['ThuocTinh'] = thuocTinhJson;
 
@@ -89,13 +97,16 @@ class _LandlordRoomsScreenState extends State<LandlordRoomsScreen> {
     try {
       var uri = Uri.parse('$baseUrl/UpdateRoom.php');
       var request = http.MultipartRequest('POST', uri);
-
+      request.headers.addAll({
+        'X-User-Id': _currentUserId,
+        'X-Caller-Id': _currentUserId,
+      });
       request.fields['Id'] = id.toString();
       request.fields['SoPhong'] = soPhong;
       request.fields['GiaPhong'] = giaPhong.toStringAsFixed(0);
       request.fields['SoNguoiToiDa'] = soNguoi.toString();
       request.fields['SoLuongXeToiDa'] = soXe.toString();
-      
+      request.fields['NguoiGuiId'] = _currentUserId;
       // 🔥 GỬI CHUỖI THUỘC TÍNH JSON LÊN PHP ĐỂ CẬP NHẬT
       request.fields['ThuocTinh'] = thuocTinhJson;
 
@@ -120,13 +131,16 @@ class _LandlordRoomsScreenState extends State<LandlordRoomsScreen> {
 
   // 4. API XÓA PHÒNG
   Future<void> _deleteRoom(int id) async {
-    int currentLandlordId = 1; 
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/DeleteRoom.php'),
+        headers: {
+          'X-User-Id': _currentUserId,
+          'X-Caller-Id': _currentUserId,
+        },
         body: {
           "Id": id.toString(), 
-          "NguoiXoaId": currentLandlordId.toString()
+          "NguoiXoaId": _currentUserId
         },
       );
       
@@ -172,11 +186,22 @@ class _LandlordRoomsScreenState extends State<LandlordRoomsScreen> {
         builder: (BuildContext context, StateSetter setModalState) {
           
           Future<void> pickImages() async {
-            final List<XFile> pickedFiles = await _picker.pickMultiImage();
-            if (pickedFiles.isNotEmpty) {
-              setModalState(() {
-                selectedImages = pickedFiles.map((xFile) => File(xFile.path)).toList();
-              });
+            if (_isPickingImages) return;
+            
+            _isPickingImages = true;
+            try {
+              final List<XFile> pickedFiles = await _picker.pickMultiImage();
+              if (pickedFiles.isNotEmpty && mounted) {
+                setModalState(() {
+                  selectedImages = pickedFiles.map((xFile) => File(xFile.path)).toList();
+                });
+              }
+            } catch (e) {
+              if (mounted) {
+                _showSnackBar("Lỗi chọn ảnh: ${e.toString()}", Colors.red);
+              }
+            } finally {
+              _isPickingImages = false;
             }
           }
 
@@ -290,7 +315,7 @@ class _LandlordRoomsScreenState extends State<LandlordRoomsScreen> {
                   ),
                   const SizedBox(height: 10),
                   InkWell(
-                    onTap: pickImages,
+                    onTap: _isPickingImages ? null : pickImages,
                     borderRadius: BorderRadius.circular(12),
                     child: DottedBorder(
                       color: const Color(0xFF10B981),
@@ -305,12 +330,23 @@ class _LandlordRoomsScreenState extends State<LandlordRoomsScreen> {
                           borderRadius: BorderRadius.circular(12),
                           color: const Color(0xFF10B981).withOpacity(0.04),
                         ),
-                        child: const Column(
+                        child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.add_a_photo_rounded, color: Color(0xFF10B981), size: 28),
-                            SizedBox(height: 6),
-                            Text("Bấm vào đây để chọn bộ sưu tập ảnh", style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.w600, fontSize: 13)),
+                            Icon(
+                              _isPickingImages ? Icons.hourglass_top_rounded : Icons.add_a_photo_rounded, 
+                              color: Color(0xFF10B981), 
+                              size: 28
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              _isPickingImages ? "Đang tải ảnh..." : "Bấm vào đây để chọn bộ sưu tập ảnh", 
+                              style: TextStyle(
+                                color: Color(0xFF10B981), 
+                                fontWeight: FontWeight.w600, 
+                                fontSize: 13
+                              )
+                            ),
                           ],
                         ),
                       ),
@@ -521,7 +557,7 @@ class _LandlordRoomsScreenState extends State<LandlordRoomsScreen> {
               itemCount: rooms.length,
               itemBuilder: (context, index) {
                 final room = rooms[index];
-                final bool isOccupied = room.isActive == 1 || room.khachThue != null; 
+                final bool isOccupied = room.trangThai == 1 || room.khachThue != null; 
                 
                 final Color cardBgColor = isOccupied ? const Color(0xFFF0FDF4) : Colors.white; 
                 final Color primaryStatusColor = isOccupied ? const Color(0xFF10B981) : const Color(0xFF64748B);

@@ -8,7 +8,7 @@ class RoomTenantModel {
   final int soNguoiToiDa;
   final int soLuongXeToiDa;
   final double giaPhong;
-  final int isActive; // 0 = Phòng trống, 1 = Đang thuê (Đồng bộ với TrangThai trong DB)
+  final int trangThai; // 0 = Phòng trống, 1 = Đang thuê (Đồng bộ với TrangThai trong DB)
   final KhachThueModel? khachThue;
   final List<ThuocTinhPhongModel> danhSachThuocTinh; // 🔥 THUỘC TÍNH MỚI JOIN TỪ BACKEND
 
@@ -19,7 +19,7 @@ class RoomTenantModel {
     required this.soNguoiToiDa,
     required this.soLuongXeToiDa,
     required this.giaPhong,
-    required this.isActive,
+    required this.trangThai,
     this.khachThue,
     required this.danhSachThuocTinh,
   });
@@ -63,7 +63,7 @@ class RoomTenantModel {
       soNguoiToiDa: sNguoi,
       soLuongXeToiDa: sXe,
       giaPhong: gPhong,
-      isActive: active,
+      trangThai: active,
       khachThue: kThue,
       danhSachThuocTinh: attrs,
     );
@@ -77,7 +77,7 @@ class RoomTenantModel {
       'SoNguoiToiDa': soNguoiToiDa,
       'SoLuongXeToiDa': soLuongXeToiDa,
       'GiaPhong': giaPhong,
-      'TrangThai': isActive,
+      'TrangThai': trangThai,
       'KhachThue': khachThue?.toJson(),
       'DanhSachThuocTinh': danhSachThuocTinh.map((e) => e.toJson()).toList(),
     };

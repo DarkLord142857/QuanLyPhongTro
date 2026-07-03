@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../khach_hang/room_detail_screen.dart';
 import 'dart:convert';
+import 'dart:typed_data';
 
 class RoomDiscoveryScreen extends StatefulWidget {
   final VoidCallback onBackHome;
@@ -83,6 +84,13 @@ class _RoomDiscoveryScreenState extends State<RoomDiscoveryScreen> {
                diaChi.contains(lowercaseQuery);
       }).toList();
     });
+  }
+
+  // Định dạng hiển thị giá tiền tệ Việt Nam (Ví dụ: 3.500.000)
+  String _formatPrice(dynamic price) {
+    if (price == null) return "0 đ";
+    final value = double.tryParse(price.toString())?.toInt() ?? 0;
+    return "${value.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} đ/tháng";
   }
 
   @override
@@ -178,9 +186,15 @@ class _RoomDiscoveryScreenState extends State<RoomDiscoveryScreen> {
                               itemCount: _filteredRooms.length,
                               itemBuilder: (context, index) {
                                 final room = _filteredRooms[index];
-                                final String? imageUrl = room['HinhAnhUrl'] != null && room['HinhAnhUrl'].toString().isNotEmpty 
-                                    ? room['HinhAnhUrl'].toString() 
-                                    : null;
+                                String imgBase64 = room['HinhAnhUrl'] ?? '';
+
+                                    // Xử lý tách chuỗi Base64 chuẩn
+                                    Uint8List? imageBytes;
+                                    if (imgBase64.contains(',')) {
+                                      // Tách lấy phần dữ liệu sau dấu phẩy (bỏ tiền tố data:image/...)
+                                      String base64String = imgBase64.split(',')[1];
+                                      imageBytes = base64Decode(base64String);
+                                    }
 
                                 return GestureDetector(
                                   onTap: () {
@@ -214,22 +228,10 @@ class _RoomDiscoveryScreenState extends State<RoomDiscoveryScreen> {
                                           child: SizedBox(
                                             height: 180,
                                             width: double.infinity,
-                                            child: imageUrl != null
-                                                ? Image.network(
-                                                    imageUrl,
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder: (context, error, stackTrace) {
-                                                      // Trả về widget ảnh lỗi nếu tệp tin trống hoặc rỗng từ server
-                                                      return Container(
-                                                        color: const Color(0xFFF1F5F9),
-                                                        child: _buildDefaultThumbnail(),
-                                                      );
-                                                    },
+                                            child: imageBytes != null
+                                                ? Image.memory(imageBytes, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => _buildDefaultThumbnail(),
                                                   )
-                                                : Container(
-                                                    color: const Color(0xFFF1F5F9),
-                                                    child: _buildDefaultThumbnail(),
-                                                  ),
+                                                : _buildDefaultThumbnail(),
                                           ),
                                         ),
                                         // KHỐI THÔNG TIN PHÒNG
@@ -246,8 +248,8 @@ class _RoomDiscoveryScreenState extends State<RoomDiscoveryScreen> {
                                                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                                                   ),
                                                   Text(
-                                                    "${(room['Price'] / 1000000).toStringAsFixed(1)} Tr/tháng",
-                                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                                                    _formatPrice(room['Price']),
+                                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.redAccent),
                                                   ),
                                                 ],
                                               ),
