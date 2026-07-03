@@ -6,6 +6,7 @@ import '../auth/register_screen.dart'; // Import màn hình đăng ký để đi
 import '../auth/forgot_password_screen.dart';
 import '../khach_hang/tenant_main_screen.dart'; // Đảm bảo import đúng file TenantMainScreen của bạn
 import '../chutro/landlord_main_screen.dart'; // Đảm bảo import đúng file LandlordMainScreen của bạn
+import '../admin/admin_house_list_screen.dart'; // Import màn hình danh sách nhà trọ Admin
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -81,7 +82,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 builder: (context) => LandlordMainScreen(userId: loggedInUserId),
               ),
             );
+          } else if (role == 'Admin') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AdminHouseListScreen(userId: loggedInUserId),
+              ),
+            );
           }
+        } else if (responseData['status'] == 'locked') {
+          // 🔥 HIỂN THỊ THÔNG BÁO KHÓA NGAY KHI ĐĂNG NHẬP
+          _showLockedDialog(responseData['message'] ?? "Tài khoản tạm thời không thể truy cập.");
         } else {
           // Trường hợp API trả về lỗi sai mật khẩu hoặc tài khoản chưa duyệt (Status Code 401, 400)
           String errorMessage = responseData['message'] ?? 'Đăng nhập thất bại';
@@ -116,6 +127,32 @@ class _LoginScreenState extends State<LoginScreen> {
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Đóng'),
           )
+        ],
+      ),
+    );
+  }
+
+  // 🔥 HÀM HIỂN THỊ DIALOG KHI NHÀ TRỌ BỊ KHÓA
+  void _showLockedDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.lock_person_rounded, color: Colors.redAccent),
+            SizedBox(width: 10),
+            Text("Thông báo hệ thống", style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            child: const Text("Đã hiểu", style: TextStyle(color: Colors.white)),
+          ),
         ],
       ),
     );

@@ -1,20 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http; // Thư viện gọi API
-import 'dart:convert'; // Xử lý giải mã chuỗi JSON
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../../../data/models/landlord_dashboard_model.dart';
-import '../chutro/add_notification_screen.dart';
-import '../chutro/landlord_service_request_screen.dart';
+import 'admin_add_notification_screen.dart'; 
+import 'admin_service_request_screen.dart';
 
-class LandlordHomeScreen extends StatefulWidget {
-  final int userId; // Truyền id chủ trọ sau khi đăng nhập thành công vào đây
+class AdminHomeScreen extends StatefulWidget {
+  final int userId;
+  final String houseName;
+  final int houseId;
 
-  const LandlordHomeScreen({super.key, this.userId = 2}); // Mặc định thử nghiệm bằng id = 2
+  const AdminHomeScreen({
+    super.key,
+    required this.userId,
+    this.houseName = "Tổng Quan Admin",
+    this.houseId = 1,
+  });
 
   @override
-  State<LandlordHomeScreen> createState() => _LandlordHomeScreenState();
+  State<AdminHomeScreen> createState() => _AdminHomeScreenState();
 }
 
-class _LandlordHomeScreenState extends State<LandlordHomeScreen> {
+class _AdminHomeScreenState extends State<AdminHomeScreen> {
   late Future<LandlordDashboardModel> _dashboardData;
 
   @override
@@ -22,18 +29,24 @@ class _LandlordHomeScreenState extends State<LandlordHomeScreen> {
     super.initState();
     _dashboardData = fetchDashboardData();
   }
-  // 🔥 DÁN ĐOẠN CODE MỚI CỦA BẠN VÀO ĐÂY:
-    Future<void> _handleRefresh() async {
-      setState(() {
-        _dashboardData = fetchDashboardData();
-      });
-    }
-  // Hàm thực hiện kết nối API HTTP GET tới hệ thống backend Laragon
+
+  Future<void> _handleRefresh() async {
+    setState(() {
+      _dashboardData = fetchDashboardData();
+    });
+  }
+
   Future<LandlordDashboardModel> fetchDashboardData() async {
-    final String url = 'http://10.0.2.2/myapi/src/Controllers/GetLandlordDashboard.php?landlord_id=${widget.userId}';
+    // Truyền thêm MaQL (houseId) để lấy đúng dữ liệu của nhà trọ được chọn
+    final String url = 'http://10.0.2.2/myapi/src/Controllers/GetLandlordDashboard.php?landlord_id=${widget.userId}&MaQL=${widget.houseId}';
 
     try {
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          "X-User-Id": widget.userId.toString(),
+        },
+      );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
@@ -58,11 +71,17 @@ class _LandlordHomeScreenState extends State<LandlordHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC), // Tone màu nền xám nhạt cao cấp (Slate 50)
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text("Tổng Quan Chủ Trọ", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20)),
+        title: Text(
+          widget.houseName,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
+        ),
         centerTitle: true,
-        backgroundColor: const Color(0xFF10B981),
+        backgroundColor: Colors.blue,
         elevation: 0,
         actions: [
           IconButton(
@@ -71,19 +90,16 @@ class _LandlordHomeScreenState extends State<LandlordHomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => AddNotificationScreen(userId: widget.userId),
+                  builder: (context) => AdminAddNotificationScreen(userId: widget.userId),
                 ),
               ).then((value) {
-                _handleRefresh(); // Tự động làm mới dữ liệu khi quay lại
-                setState(() {
-                  _dashboardData = fetchDashboardData();
-                });
+                _handleRefresh();
               });
             },
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-            onPressed: _handleRefresh, // Làm mới dữ liệu khi nhấn nút refresh
+            onPressed: _handleRefresh,
           ),
           const SizedBox(width: 8),
         ],
@@ -95,7 +111,7 @@ class _LandlordHomeScreenState extends State<LandlordHomeScreen> {
         future: _dashboardData,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)));
+            return const Center(child: CircularProgressIndicator(color: Colors.blue));
           } else if (snapshot.hasError) {
             return Center(
               child: Padding(
@@ -115,21 +131,18 @@ class _LandlordHomeScreenState extends State<LandlordHomeScreen> {
 
           return RefreshIndicator(
             onRefresh: _handleRefresh,
-            color: const Color(0xFF10B981),
+            color: Colors.blue,
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ==========================================
-                  // THỐNG KÊ PHÒNG TRỌ
-                  // ==========================================
-                  const Text("Trạng Thái Phòng", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                  const Text("Trạng Thái Hệ Thống", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      _buildStatCard("Tổng Số", "${data.tongPhong}", const Color(0xFF3B82F6), Icons.home_work_rounded),
+                      _buildStatCard("Tổng Số Phòng", "${data.tongPhong}", const Color(0xFF3B82F6), Icons.home_work_rounded),
                       const SizedBox(width: 10),
                       _buildStatCard("Đang Ở", "${data.dangO}", const Color(0xFF10B981), Icons.people_alt_rounded),
                       const SizedBox(width: 10),
@@ -138,23 +151,17 @@ class _LandlordHomeScreenState extends State<LandlordHomeScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ==========================================
-                  // THỐNG KÊ TÀI CHÍNH
-                  // ==========================================
-                  const Text("Tài Chính Kỳ Này", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                  const Text("Tài Chính Admin", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      _buildFinanceCard("Đã Thu Tháng Này", formatCurrency(data.daThu), const Color(0xFF10B981)),
+                      _buildFinanceCard("Tổng Đã Thu", formatCurrency(data.daThu), const Color(0xFF10B981)),
                       const SizedBox(width: 12),
-                      _buildFinanceCard("Khách Thuê Còn Nợ", formatCurrency(data.conNo), const Color(0xFFEF4444)),
+                      _buildFinanceCard("Tổng Còn Nợ", formatCurrency(data.conNo), const Color(0xFFEF4444)),
                     ],
                   ),
                   const SizedBox(height: 24),
 
-                  // ==========================================
-                  // DANH SÁCH YÊU CẦU DỊCH VỤ / SỰ CỐ MỚI
-                  // ==========================================
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -170,9 +177,6 @@ class _LandlordHomeScreenState extends State<LandlordHomeScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                // =================================================================
-              // KHỐI 1: DANH SÁCH YÊU CẦU DỊCH VỤ & SỰ CỐ TỪ KHÁCH THUÊ
-              // =================================================================
               const Row(
                 children: [
                   Icon(Icons.build_circle_rounded, color: Colors.orange, size: 22),
@@ -197,17 +201,14 @@ class _LandlordHomeScreenState extends State<LandlordHomeScreen> {
                         final yc = data.yeuCauMoi[index];
                         final int status = int.tryParse((yc as dynamic).trangThai?.toString() ?? '0') ?? 0;
                         final bool isNotProcessed = status == 0;
-                        final int ycId = (yc as dynamic).id ?? 0;
                         return InkWell(
-                        // Nhấp vào thẻ bất kì sẽ dẫn sang màn hình quản lý chi tiết
                         onTap: () async {
                           final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => LandlordServiceRequestScreen(landlordId: widget.userId),
+                              builder: (context) => AdminServiceRequestScreen(landlordId: widget.userId),
                             ),
                           );
-                          // Nếu bên màn hình quản lý có cập nhật trạng thái sự cố, tự động làm mới Home Screen
                           if (result == true) {
                             _handleRefresh();
                           }
@@ -217,10 +218,9 @@ class _LandlordHomeScreenState extends State<LandlordHomeScreen> {
                           margin: const EdgeInsets.only(right: 12, bottom: 4, top: 4),
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                           // Thay đổi màu nền hộp thẻ theo từng trạng thái cụ thể
                             color: status == 0 
-                                ? const Color(0xFFFFF7ED) // Cam nhạt cho Chưa xử lý
-                                : (status == 1 ? const Color(0xFFFEFCE8) : Colors.white), // Vàng nhạt / Trắng
+                                ? const Color(0xFFFFF7ED) 
+                                : (status == 1 ? const Color(0xFFFEFCE8) : Colors.white), 
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: status == 0 
@@ -259,90 +259,14 @@ class _LandlordHomeScreenState extends State<LandlordHomeScreen> {
 
                               Text("Người gửi: ${(yc as dynamic).tenKhachHang ?? 'Khách thuê'}", style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
                               const SizedBox(height: 4),
-                              Expanded( // 👈 Đã thêm: Bọc bằng Expanded để tránh lỗi tràn chiều cao card
+                              Expanded(
                                     child: Text(
                                       yc.moTa,
-                                      maxLines: 2, // 👈 Đã thêm: Khống chế tối đa 2 dòng nội dung mô tả
+                                      maxLines: 2, 
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(fontSize: 12, color: Color(0xFF475569)),
                                     ),
                                   ),
-                              const SizedBox(height: 12),
-                              // Row(
-                              //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              //   children: [
-                              //     Text(yc.ngayGui, style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
-                              //     if (isNotProcessed && (yc as dynamic).trangThai == 0 && ycId > 0)
-                              //   SizedBox(
-                              //     height: 32,
-                              //     child: TextButton.icon(
-                              //     onPressed: () async {
-                              //       // Gọi đến API chuyên trách xử lý yêu cầu dịch vụ của chủ trọ
-                              //       final String url = 'http://10.0.2.2/myapi/src/Controllers/ApproveServiceRequest.php';
-                              //       try {
-                              //         final res = await http.post(
-                              //           Uri.parse(url),
-                              //           headers: {"Content-Type": "application/json"},
-                              //           body: json.encode({"id": ycId}),
-                              //         );
-                                      
-                              //         if (res.statusCode == 200) {
-                              //           final resData = json.decode(res.body);
-                              //           if (resData['status'] == 'success') {
-                                          
-                              //             if (mounted) {
-                              //               setState(() {
-                              //                 // 1. Cập nhật trực tiếp trạng thái của biến 'yc' hiện tại lên 1
-                              //                 // Lệnh này giúp nút biến mất và Badge "Đã xong" hiện lên ngay lập tức!
-                              //                 try {
-                              //                   (yc as dynamic).trangThai = 1;
-                              //                 } catch (e) {
-                              //                   print("Lỗi gán trangThai: $e");
-                              //                 }
-                              //               });
-                              //             }
-
-                              //             ScaffoldMessenger.of(context).showSnackBar(
-                              //               const SnackBar(
-                              //                 content: Text('✅ Đã xác nhận xử lý yêu cầu thành công!'), 
-                              //                 backgroundColor: Color(0xFF10B981),
-                              //                 behavior: SnackBarBehavior.floating,
-                              //               )
-                              //             );
-                                          
-                              //             // Kéo lại dữ liệu từ server Laragon để đồng bộ vĩnh viễn
-                              //             _handleRefresh(); 
-                              //           }
-                              //         }
-                              //       } catch (e) {
-                              //         print("Lỗi kết nối: $e");
-                              //       }
-                              //     },
-                              //     // 🔥 ĐÃ THÊM: Cấu hình để TextButton có màu nền đậm và chữ trắng
-                              //   style: TextButton.styleFrom(
-                              //     backgroundColor: const Color(0xFF059669), // Màu xanh lá đậm (Emerald 600)
-                              //     foregroundColor: Colors.white,            // Đổi màu chữ và icon thành Màu trắng để nổi bật trên nền đậm
-                              //     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Khoảng cách đệm bên trong nút
-                              //     shape: RoundedRectangleBorder(
-                              //       borderRadius: BorderRadius.circular(12), // Bo góc nút bấm cho đẹp và đồng bộ
-                              //     ),
-                              //   ),
-                              //     icon: const Icon(Icons.check_circle_outline, size: 18),
-                              //     label: const Text(
-                              //       "Xác nhận", 
-                              //       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                              //     ),
-                              //   ),
-                              //   )
-                              // else
-                              //   // Hiển thị text trạng thái nhỏ bên phải nếu dòng này ban đầu đã là "Đã xong"
-                              //   const Padding(
-                              //     padding: EdgeInsets.only(right: 8.0),
-                              //     child: Text("Đã xử lý", style: TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic)),
-                              //   ),                        
-                                
-                              //   ],
-                              // ),
                             ],
                           ),
                         ),
@@ -352,36 +276,32 @@ class _LandlordHomeScreenState extends State<LandlordHomeScreen> {
                   ),
                   const SizedBox(height: 24),
                 
-                  // =================================================================
-              // KHỐI 2: THÔNG BÁO ĐÃ PHÁT ĐI (THUẦN HIỂN THỊ - KHÔNG NÚT BẤM)
-              // =================================================================
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.campaign_rounded, color: Color(0xFF10B981), size: 22),
+                      Icon(Icons.campaign_rounded, color: Colors.blue, size: 22),
                       SizedBox(width: 8),
                       Text(
-                        "Thông báo chung đã gửi",
+                        "Thông báo Admin đã gửi",
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
                       ),
                     ],
                   ),
                   IconButton(
-                    icon: const Icon(Icons.add_circle_outline_rounded, color: Color(0xFF10B981)),
+                    icon: const Icon(Icons.add_circle_outline_rounded, color: Colors.blue),
                     onPressed: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => AddNotificationScreen(userId: widget.userId)),
+                      MaterialPageRoute(builder: (context) => AdminAddNotificationScreen(userId: widget.userId)),
                     ),
                   )
                 ],
               ),
               const SizedBox(height: 8),
               data.thongBaoDaGui.isEmpty
-                  ? _buildEmptyWidget("Chưa phát đi thông báo nào rộng rãi.")
+                  ? _buildEmptyWidget("Chưa phát đi thông báo nào.")
                   : ListView.builder(
-                      //scrollDirection: Axis.horizontal,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: data.thongBaoDaGui.length,
@@ -392,7 +312,7 @@ class _LandlordHomeScreenState extends State<LandlordHomeScreen> {
                           margin: const EdgeInsets.symmetric(vertical: 6),
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.white, // Luôn luôn nền trắng thanh lịch
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(color: const Color(0xFFF1F5F9)),
                             boxShadow: [

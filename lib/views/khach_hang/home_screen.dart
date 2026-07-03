@@ -88,10 +88,10 @@ class _KhachHangHomeScreenState extends State<KhachHangHomeScreen> {
 
       if (response.statusCode == 200 && data['status'] == 'success') {
         final homeData = data['data'];
-        
+
         setState(() {
           _fullName = homeData['user']['FullName'] ?? "Người dùng";
-          
+
           if (homeData['room_status']['has_room'] == true) {
             _hasRoom = true;
             _roomNumber = "Phòng ${homeData['room_status']['RoomNumber']}";
