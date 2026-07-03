@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../khach_hang/room_detail_screen.dart';
 import 'dart:convert';
-import 'dart:typed_data';
+import 'package:intl/intl.dart';
 
 class RoomDiscoveryScreen extends StatefulWidget {
   final VoidCallback onBackHome;
@@ -33,6 +33,7 @@ class _RoomDiscoveryScreenState extends State<RoomDiscoveryScreen> {
     super.dispose();
   }
 
+  // 🟢 HÀM KẾT NỐI VÀ LẤY DỮ LIỆU TỪ API
   Future<void> _fetchAvailableRooms() async {
     setState(() {
       _isLoading = true;
@@ -40,25 +41,34 @@ class _RoomDiscoveryScreenState extends State<RoomDiscoveryScreen> {
     });
 
     try {
+      // Endpoint API chạy dưới máy ảo Android kết nối tới Localhost (Laragon/XAMPP) via IP 10.0.2.2
       final url = Uri.parse('http://10.0.2.2/myapi/src/Controllers/RoomDiscoveryController.php');
       final response = await http.get(url).timeout(const Duration(seconds: 10));
-      final data = jsonDecode(response.body);
 
-      if (response.statusCode == 200 && data['status'] == 'success') {
-        setState(() {
-          _rooms = data['data'] ?? [];
-          _filteredRooms = _rooms; // Ban đầu danh sách hiển thị bằng danh sách gốc
-          _isLoading = false;
-        });
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        
+        if (responseData['status'] == 'success' && responseData['data'] != null) {
+          setState(() {
+            _rooms = responseData['data'];
+            _filteredRooms = List.from(_rooms); // Sao chép sang mảng lọc ban đầu
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _errorMessage = responseData['message'] ?? 'Không thể tải dữ liệu phòng.';
+            _isLoading = false;
+          });
+        }
       } else {
         setState(() {
-          _errorMessage = data['message'] ?? 'Lấy danh sách phòng thất bại';
+          _errorMessage = 'Lỗi kết nối Server (${response.statusCode})';
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Không thể kết nối máy chủ Laragon: $e';
+        _errorMessage = 'Lỗi ngoại lệ: Không thể kết nối tới server mạng.';
         _isLoading = false;
       });
     }
@@ -186,16 +196,6 @@ class _RoomDiscoveryScreenState extends State<RoomDiscoveryScreen> {
                               itemCount: _filteredRooms.length,
                               itemBuilder: (context, index) {
                                 final room = _filteredRooms[index];
-                                String imgBase64 = room['HinhAnhUrl'] ?? '';
-
-                                    // Xử lý tách chuỗi Base64 chuẩn
-                                    Uint8List? imageBytes;
-                                    if (imgBase64.contains(',')) {
-                                      // Tách lấy phần dữ liệu sau dấu phẩy (bỏ tiền tố data:image/...)
-                                      String base64String = imgBase64.split(',')[1];
-                                      imageBytes = base64Decode(base64String);
-                                    }
-
                                 return GestureDetector(
                                   onTap: () {
                                     Navigator.push(
@@ -206,7 +206,7 @@ class _RoomDiscoveryScreenState extends State<RoomDiscoveryScreen> {
                                     );
                                   },
                                   child: Container(
-                                    margin: const EdgeInsets.only(bottom: 16),
+                                    margin: const EdgeInsets.only(bottom: 20),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(16),
@@ -223,13 +223,22 @@ class _RoomDiscoveryScreenState extends State<RoomDiscoveryScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         // KHỐI HIỂN THỊ HÌNH ẢNH THUMBNAIL
-                                        ClipRRect(
-                                          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                                          child: SizedBox(
+                                       ClipRRect(
+                                          borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(16),
+                                            bottomLeft: Radius.circular(16),
+                                            topRight: Radius.circular(16),
+                                            bottomRight: Radius.circular(16),
+                                          ),
+                                          child: Container(
+                                            width: double.infinity,                                           
                                             height: 180,
-                                            width: double.infinity,
-                                            child: imageBytes != null
-                                                ? Image.memory(imageBytes, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => _buildDefaultThumbnail(),
+                                            color: const Color(0xFFF1F5F9),
+                                            child: room['ThumbnailUrl'] != null && room['ThumbnailUrl'].toString().isNotEmpty
+                                                ? Image.network(
+                                                    room['ThumbnailUrl'],
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (context, error, stackTrace) => _buildDefaultThumbnail(),
                                                   )
                                                 : _buildDefaultThumbnail(),
                                           ),

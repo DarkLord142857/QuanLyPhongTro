@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart'; // 🔥 Thêm thư viện này ở đầu file
 import 'dart:convert';
-import 'dart:typed_data';
 
 class RoomDetailScreen extends StatefulWidget {
   final int roomId;
@@ -162,53 +161,51 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                           });
                         },
                         itemBuilder: (context, index) {
-                          final String rawData = imagesList[index].toString().trim();
-                          // 1. Kiểm tra nếu là đường dẫn URL (bắt đầu bằng http)
-                          if(rawData.isEmpty){
-                            return _buildDetailPlaceholder();
-                          }
-                          // TRƯỜNG HỢP A: Chuỗi gửi lên là link URL trực tiếp (không mã hóa)
-                          if (rawData.startsWith('http')) {
+                         // Ép kiểu phần tử từ API về dạng chuỗi văn bản thuần (URL String)
+                            final String rawUrl = imagesList[index].toString().trim();
+
+                            if (rawUrl.isEmpty) {
+                              return _buildDetailPlaceholder();
+                            }
+
+                            // Hiển thị trực tiếp ảnh từ URL mạng thông qua Image.network
                             return Image.network(
-                              rawData,
+                              rawUrl,
                               fit: BoxFit.cover,
                               width: double.infinity,
-                              errorBuilder: (context, error, stackTrace) => _buildDetailPlaceholder(),
-                            );
-                          }
-                          // TRƯỜNG HỢP B: Chuỗi là mã hóa Base64
-                              try {
-                                // Giải mã Base64 ra mảng byte trước
-                                final Uint8List decodedBytes = base64Decode(rawData);
-                                
-                                // Thử dịch ngược mảng byte xem nội dung bên trong có phải là văn bản dạng URL hay không
-                                final String decodedText = utf8.decode(decodedBytes).trim();
+                              loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+                                  if (loadingProgress == null) return child; // Ảnh đã tải xong hoàn toàn
+                                  
+                                  double? finalProgress;
+                                  
+                                  if (loadingProgress.expectedTotalBytes != null && loadingProgress.expectedTotalBytes! > 0) {
+                                    final double computed = loadingProgress.cumulativeBytesLoaded.toDouble() / 
+                                                            loadingProgress.expectedTotalBytes!.toDouble();
+                                    
+                                    if (computed >= 0.0 && computed <= 1.0) {
+                                      finalProgress = computed;
+                                    } else if (computed > 1.0) {
+                                      finalProgress = 1.0;
+                                    } else {
+                                      finalProgress = 0.0;
+                                    }
+                                  }
 
-                                if (decodedText.startsWith('http')) {
-                                  // Nếu dịch ra là một link HTTP, dùng Image.network để tải ảnh từ Web
-                                  return Image.network(
-                                    decodedText,
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    errorBuilder: (context, error, stackTrace) => _buildDetailPlaceholder(),
+                                  return Container(
+                                    color: const Color(0xFFF1F5F9),
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        value: finalProgress,
+                                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
+                                      ),
+                                    ),
                                   );
-                                }
-                              } catch (e) {
-                                // Nếu lệnh utf8.decode lỗi -> Chứng tỏ đây là dữ liệu byte ảnh nhị phân thực tế (VARBINARY)
-                              }
-                              // TRƯỜNG HỢP C: Hiển thị dữ liệu ảnh nhị phân thực tế qua Image.memory
-                              try {
-                                return Image.memory(
-                                  base64Decode(rawData),
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  errorBuilder: (context, error, stackTrace) => _buildDetailPlaceholder(),
-                                );
-                              } catch (e) {
-                                // Phòng ngừa chuỗi lỗi cấu trúc không thể decode
+                                },
+                              errorBuilder: (context, error, stackTrace) {
+                                debugPrint("Lỗi tải ảnh slider chi tiết: $error tại link: $rawUrl");
                                 return _buildDetailPlaceholder();
-                              }
-
+                              },                       
+                            );
                         },
                       )
                       : _buildDetailPlaceholder(),
