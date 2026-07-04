@@ -46,13 +46,19 @@ class _LandlordTenantScreenState extends State<LandlordTenantScreen> {
     }
   }
 
-  Future<void> _loadAvailableRooms(StateSetter setModalState) async {
+Future<void> _loadAvailableRooms([StateSetter? setModalState]) async {
     try {
       final rooms = await TenantApiService.fetchAvailableRooms();
       if (mounted) {
-        setModalState(() {
+        setState(() {
           _availableRooms = rooms;
         });
+        // Nếu có setModalState của Bottom Sheet thì cập nhật luôn giao diện bên trong nó
+        if (setModalState != null) {
+          setModalState(() {
+            _availableRooms = rooms;
+          });
+        }
       }
     } catch (e) {
       print("Lỗi tải phòng trống: $e");
@@ -141,8 +147,10 @@ class _LandlordTenantScreenState extends State<LandlordTenantScreen> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) => StatefulBuilder(
         builder: (BuildContext context, StateSetter setModalState) {
-          if (!isEdit && _availableRooms.isEmpty) {
-            _loadAvailableRooms(setModalState);
+        if (!isEdit) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+      
+            });
           }
 
           return Padding(
@@ -543,7 +551,12 @@ class _LandlordTenantScreenState extends State<LandlordTenantScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _openTenantFormBottomSheet(),
+        onPressed: () async {
+          // 1. Gọi API tải danh sách phòng trống mới nhất trước
+          await _loadAvailableRooms();
+          // 2. Sau khi có data mới nhất rồi mới mở Bottom Sheet lên
+          _openTenantFormBottomSheet();
+        },
         backgroundColor: const Color(0xFF10B981),
         foregroundColor: Colors.white,
         child: const Icon(Icons.person_add_alt_1_rounded),
