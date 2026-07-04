@@ -109,7 +109,8 @@ class _LandlordInvoiceScreenState extends State<LandlordInvoiceScreen> {
     final isEdit = invoice != null;
     final periodCtrl = TextEditingController(text: isEdit ? invoice['Period'] : '');
     final roomCtrl = TextEditingController(text: isEdit ? invoice['RoomNumber'] : '');
-    final roomPriceCtrl = TextEditingController(text: isEdit ? invoice['TotalPrice'].toString() : '3500000');
+    // 🛠️ THAY ĐỔI: Sử dụng 'RoomPrice' cho tiền phòng thay vì 'TotalPrice' của cả hóa đơn
+   final roomPriceCtrl = TextEditingController(text: isEdit ? (invoice['RoomPrice'] ?? '3500000').toString() : '3500000');
     final dCuCtrl = TextEditingController(text: '1200');
     final dMoiCtrl = TextEditingController(text: '1350');
     final nCuCtrl = TextEditingController(text: '300');
@@ -126,6 +127,7 @@ class _LandlordInvoiceScreenState extends State<LandlordInvoiceScreen> {
               if (!isEdit) TextField(controller: roomCtrl, decoration: const InputDecoration(labelText: "Mã số phòng (ID)")),
               TextField(controller: periodCtrl, decoration: const InputDecoration(labelText: "Kỳ hóa đơn (Ví dụ: 07/2026)")),
               TextField(controller: roomPriceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Tiền thuê phòng")),
+             
               const Divider(),
               Row(
                 children: [
@@ -141,6 +143,19 @@ class _LandlordInvoiceScreenState extends State<LandlordInvoiceScreen> {
                   Expanded(child: TextField(controller: nMoiCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Nước mới"))),
                 ],
               ),
+              Row(children: [
+                 // 🛠️ THÊM HIỂN THỊ: Cho chủ nhà biết Tổng hóa đơn cũ trước đó để tham khảo khi sửa
+              if (isEdit) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "Tổng hóa đơn hiện tại: ${_formatCurrency(invoice['TotalPrice'])}",
+                    style: const TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+              ],)
             ],
           ),
         ),
