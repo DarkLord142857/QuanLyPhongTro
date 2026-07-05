@@ -6,6 +6,7 @@ import '../khach_hang/tenant_invoice_screen.dart';
 import '../khach_hang/tenant_utility_screen.dart';
 import '../khach_hang/tenant_notifications_screen.dart';
 import '../khach_hang/tenant_payment_history_screen.dart';
+import '../khach_hang/tenant_invoice_detail_screen.dart';
 import '../khach_hang/payment_screen.dart';
 import 'dart:convert';
 
@@ -22,6 +23,9 @@ class _KhachHangHomeScreenState extends State<KhachHangHomeScreen> {
   bool _isLoading = true;
   String _errorMessage = '';
   int _unreadCount = 0;
+  List _invoices = [];
+  String _errorMsg = '';
+
   
   
   // Các biến lưu thông tin thực tế đồng bộ từ Database
@@ -31,12 +35,14 @@ class _KhachHangHomeScreenState extends State<KhachHangHomeScreen> {
   double _roomPrice = 0;
   bool _hasRoom = false;
   Map<String, dynamic>? _latestInvoice;
+  List<dynamic> _invoicesToPay = []; // Danh sách hóa đơn cần thanh toán (chưa thanh toán)
 
   @override
   void initState() {
     super.initState();
     _fetchHomeData(); // Tự động kéo dữ liệu từ PHP về ngay khi vừa đăng nhập xong
     _checkUnreadNotifications(); // Kiểm tra số lượng thông báo chưa
+    _loadInvoicesData();
   }
 
       // 🌟 1. SỬA LẠI HÀM CHECK THÔNG BÁO: Đếm trực tiếp từ trangThai (0 = Chưa đọc) của database
@@ -70,6 +76,63 @@ class _KhachHangHomeScreenState extends State<KhachHangHomeScreen> {
             print("Lỗi check thông báo: $e");
           }
         }
+
+          Future<void> _loadInvoices() async {
+            if (!mounted) return;
+            
+            // Bước 1: Bật trạng thái loading và xóa thông báo lỗi cũ
+            setState(() {
+              _isLoading = true;
+              _errorMsg = '';
+            });
+
+            // Đường dẫn API lấy danh sách hóa đơn của Khách thuê (Thay đổi URL cho đúng với dự án của bạn)
+            // Truyền kèm widget.userId để lấy đúng hóa đơn của người đang đăng nhập
+            final String url = 'http://10.0.2.2/myapi/src/Controllers/GetTenantInvoices.php?user_id=${widget.userId}';
+
+            try {
+              final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
+              final res = json.decode(response.body);
+              
+              if (res['status'] == 'success') {
+                if (mounted) {
+                  setState(() {
+                    _invoices = res['data'] ?? []; // Gán mảng dữ liệu hóa đơn vào biến toàn cục
+                    _isLoading = false;            // Tắt trạng thái loading
+                  });
+                }
+              } else {
+                if (mounted) {
+                  setState(() {
+                    _errorMsg = res['message'] ?? 'Lỗi tải danh sách hóa đơn';
+                    _isLoading = false;
+                  });
+                }
+              }
+            } catch (e) {
+              if (mounted) {
+                setState(() {
+                  _errorMsg = 'Không thể kết nối đến máy chủ.';
+                  _isLoading = false;
+                });
+              }
+            }
+          }
+  // Thêm hàm này vào trong _KhachHangHomeScreenState
+  Future<void> _loadInvoicesData() async {
+    final String url = 'http://10.0.2.2/myapi/src/Controllers/GetTenantInvoices.php?user_id=${widget.userId}';
+    try {
+      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
+      final res = json.decode(response.body);
+      if (res['status'] == 'success' && res['data'] != null) {
+        setState(() {
+          _invoices = res['data']; // Nạp dữ liệu vào mảng _invoices đã khai báo
+        });
+      }
+    } catch (e) {
+      debugPrint("Lỗi tải hóa đơn: $e");
+    }
+  }
   // Hàm kết nối và gọi API tổng hợp từ máy chủ Laragon
   Future<void> _fetchHomeData() async {
     setState(() {
@@ -104,6 +167,7 @@ class _KhachHangHomeScreenState extends State<KhachHangHomeScreen> {
           }
 
           _latestInvoice = homeData['latest_invoice'];
+          _invoicesToPay = homeData['invoices_to_pay'] ?? [];
           _isLoading = false;
         });
       } else {
@@ -117,6 +181,29 @@ class _KhachHangHomeScreenState extends State<KhachHangHomeScreen> {
         _errorMessage = "Lỗi kết nối máy chủ Laragon. Vui lòng thử lại!";
         _isLoading = false;
       });
+    }
+  }
+
+  // 🌟 THÊM HÀM NÀY VÀO TRONG CLASSS _KhachHangHomeScreenState
+
+  Future<void> _loadUnpaidInvoice() async {
+    // Gọi đến API lấy danh sách hóa đơn của người dùng
+    final String url = 'http://10.0.2.2/myapi/src/Controllers/GetTenantInvoices.php?user_id=${widget.userId}';
+    try {
+      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
+      final res = json.decode(response.body);
+      
+      if (res['status'] == 'success' && res['data'] != null && res['data'].isNotEmpty) {
+        setState(() {
+          // Lấy hóa đơn đầu tiên (hoặc hóa đơn chưa thanh toán)
+          _latestInvoice = List<Map<String, dynamic>>.from(res['data']).firstWhere(
+            (element) => element['TrangThaiThanhToan'] == 'ChuaThanhToan',
+            orElse: () => res['data'][0],
+          );
+        });
+      }
+    } catch (e) {
+      debugPrint("Lỗi tải hóa đơn: $e");
     }
   }
 
@@ -186,15 +273,194 @@ class _KhachHangHomeScreenState extends State<KhachHangHomeScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              _buildPremiumInvoiceCard(),
-              const SizedBox(height: 40),
-            ],
-          ),
-        ),
-      ),
-      ),
-    );
-  }
+              // 2. 🔥 KIỂM TRA: Nếu không có hóa đơn nào cần đóng tiền
+              if (_invoicesToPay.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle_rounded, color: Colors.green.shade700, size: 24),
+                      const SizedBox(width: 12),
+                      const Text(
+                        "Tuyệt vời! Bạn không có hóa đơn cần thanh toán.",
+                        style: TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                // 3. 🔥 DÙNG VÒNG LẶP: Hiển thị danh sách toàn bộ hóa đơn cần đóng
+                Column(
+                  children: _invoicesToPay.map((invoice) {
+                    final int invoiceId = invoice['InvoiceId'] ?? 0;
+                    final String period = invoice['Period'] ?? 'Chưa rõ kỳ';
+                    final double total = (invoice['Total'] ?? 0).toDouble();
+                    final double debt = (invoice['Debt'] ?? 0).toDouble();
+                    final String status = invoice['Status'] ?? '';
+
+                    // Hàm định dạng tiền tệ helper Việt Nam Đồng
+                    String formatMoney(double amount) {
+                      return "${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} đ";
+                    }
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12), // Tạo khoảng cách giữa các hóa đơn
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.15), width: 1.2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: InkWell(
+                          onTap: () {
+                            // 🚀 BƯỚC CHUYỂN HƯỚNG SANG FILE CỦA BẠN:
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => TenantInvoiceDetailScreen(invoiceId: invoiceId),
+                              ),
+                            );
+                          },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.receipt_long_rounded, color: Color(0xFF2563EB), size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "Kỳ hóa đơn: $period",
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: status == 'ThanhToanMotPhan' ? Colors.orange.shade50 : Colors.red.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  status == 'ThanhToanMotPhan' ? "Còn nợ một phần" : "Chưa thanh toán",
+                                  style: TextStyle(
+                                    color: status == 'ThanhToanMotPhan' ? Colors.orange.shade800 : Colors.redAccent,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 24, thickness: 0.8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text("Tổng hóa đơn", style: TextStyle(color: Colors.black54, fontSize: 12)),
+                                  const SizedBox(height: 4),
+                                  Text(formatMoney(total), style: const TextStyle(fontSize: 14, color: Colors.black87)),
+                                ],
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  const Text("Số tiền cần đóng", style: TextStyle(color: Colors.black54, fontSize: 12)),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    formatMoney(debt),
+                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.redAccent),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 40,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                // Điều hướng sang màn hình thanh toán chi tiết, truyền ID hóa đơn tương ứng
+                                debugPrint("Bấm thanh toán hóa đơn ID: $invoiceId");
+                                // Kiểm tra xem danh sách hóa đơn từ API đã tải về được chưa hoặc bị trống không
+                                if (_invoices.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text("Hiện tại bạn không có hóa đơn nào cần thanh toán hoặc dữ liệu đang tải.")),
+                                  );
+                                  return;
+                                }
+
+                                // Lấy ra hóa đơn đầu tiên (mới nhất) chưa được thanh toán hoàn toàn
+                                final latestInvoice = _invoices.firstWhere(
+                                  (element) => element['TrangThaiThanhToan'] != 'DaThanhToan',
+                                  orElse: () => _invoices[0],
+                                );
+                                
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => PaymentScreen(
+                                      userId: widget.userId,
+                                                // Sử dụng int.tryParse để an toàn hơn, nếu lỗi hoặc null sẽ lấy mặc định là 0
+                                                hoaDonId: int.tryParse(latestInvoice['Id']?.toString() ?? '') ?? 0, 
+                                                
+                                                // Đối với double (tiền bạc), nếu null sẽ lấy mặc định là 0.0
+                                                tongTien: double.tryParse(latestInvoice['TongTienHoaDon']?.toString() ?? '') ?? 0.0,
+                                                congNo: double.tryParse(latestInvoice['CongNo']?.toString() ?? '') ?? 0.0,
+                                                
+                                                // ID chủ trọ
+                                                nguoiNhanId: int.tryParse(latestInvoice['NguoiNhanId']?.toString() ?? '') ?? 0,
+                                    ),
+                                  ),
+                                ).then((value) {
+                                  if (value == true) {
+                                    // Nếu thanh toán xong bấm Đồng ý, tiến hành tải lại danh sách hóa đơn tại đây
+                                    _loadInvoicesData(); 
+                                  }
+                                });
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2563EB),
+                                foregroundColor: Colors.white,
+                                elevation: 2,
+                                shadowColor: Colors.black.withOpacity(0.4),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: const Text("Thanh toán", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                            ),
+                          )
+                        ],
+                      ),
+                      ),
+                    );
+                  }).toList(), // Chuyển mảng map thành danh sách Widget cho Column nhận diện
+                ),
+                            const SizedBox(height: 40),
+                          ],
+                        ),
+                      ),
+                    ),
+                    ),
+                  );
+                }
 
   Widget _buildPremiumHeader(BuildContext context) {
     return Container(
@@ -505,127 +771,4 @@ Widget _buildPremiumMenuCard(IconData icon, Color color, String title, String su
     ),
   );
 }
-
-  Widget _buildPremiumInvoiceCard() {
-    if (_latestInvoice == null) {
-      return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 24),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.green[50],
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.green.shade100, width: 1),
-        ),
-        child: const Row(
-          children: [
-            Icon(Icons.check_circle_outline_rounded, color: Colors.green, size: 28),
-            SizedBox(width: 12),
-            Text("Tuyệt vời! Không có hóa đơn nợ.", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-          ],
-        ),
-      );
-    }
-
-    // 1. Lấy tổng tiền gốc của hóa đơn kỳ này
-    final double totalAmount = double.tryParse(_latestInvoice!['Total']?.toString() ?? '0') ?? 0.0;
-    // 💡 LẤY SỐ TIỀN CHƯA THANH TOÁN (CÒN NỢ) TRỰC TIẾP TỪ BACKEND TRẢ VỀ
-    final double remainingDebt = double.tryParse(_latestInvoice!['Debt']?.toString() ?? '0') ?? 0.0;
-    final String period = _latestInvoice!['Period'] ?? "";
-    final String status = _latestInvoice!['Status'] ?? "Chưa thanh toán";
-    final bool isPaid = status == "Đã thanh toán";
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isPaid ? Colors.green.shade100 : const Color(0xFFFEF2F2), width: 2),
-        boxShadow: [BoxShadow(color: const Color(0xFF0F172A).withOpacity(0.03), blurRadius: 20, offset: const Offset(0, 10))],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: isPaid ? Colors.green[50] : const Color(0xFFFEF2F2), shape: BoxShape.circle),
-                  child: Icon(
-                    isPaid ? Icons.check_circle_outline_rounded : Icons.error_outline_rounded, 
-                    color: isPaid ? Colors.green : const Color(0xFFEF4444), 
-                    size: 24
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("Tiền nhà Kỳ tháng $period", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B))),
-                      const SizedBox(height: 3),
-                      Text(
-                        "Trạng thái: $status", 
-                        style: TextStyle(color: isPaid ? Colors.green : const Color(0xFFEF4444), fontSize: 12, fontWeight: FontWeight.w600)
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Divider(color: Color(0xFFF1F5F9), thickness: 1.5),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("Tổng tiền cần thanh toán", style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
-                    const SizedBox(height: 4),
-                    Text(_formatCurrency(remainingDebt), style:TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: remainingDebt > 0 ? const Color(0xFFEF4444) : const Color(0xFF1E293B))),
-                  ],
-                ),
-                if (!isPaid) 
-                  ElevatedButton(
-                    onPressed: () async {
-                      //     // Lấy invoiceId từ API trả về (tùy thuộc vào tên key id hóa đơn của bạn trong SQL, ví dụ 'InvoiceID' hoặc 'id')
-                      // final String invoiceId = _latestInvoice!['InvoiceID']?.toString() ?? '0';
-
-                      // // Chuyển sang màn hình thanh toán MoMo và đợi kết quả trả về khi back lại
-                      // final isSuccess = await Navigator.push(
-                      //   context,
-                      //   MaterialPageRoute(
-                      //     builder: (context) => PaymentScreen(
-                      //       userId: widget.userId,
-                      //       amount: remainingDebt, // Số tiền nợ thực tế cần đóng
-                      //       invoiceId: invoiceId,
-                      //       period: period,
-                      //     ),
-                      //   ),
-                      // );
-
-                      // // Nếu thanh toán thành công và quay lại, tự động refresh lại data trang chủ để cập nhật giao diện
-                      // if (isSuccess == true) {
-                      //   _fetchHomeData();
-                      // }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: const Text("Thanh toán", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                  ),
-              ],
-            )
-          ],
-        ),
-      ),
-    );
-  }
 }

@@ -1,176 +1,286 @@
-// import 'package:flutter/material.dart';
-// // import 'package:momo_vn/momo_vn.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-// class PaymentScreen extends StatefulWidget {
-//   final int userId;
-//   final double amount;
-//   final String invoiceId; // Dùng làm orderId hoặc nhận diện hóa đơn
-//   final String period;
+class PaymentScreen extends StatefulWidget {
+  final int userId;
+  final int hoaDonId;
+  final double tongTien;
+  final double congNo;
+  final int nguoiNhanId; // ID Chủ trọ để lưu vào lịch sử thanh toán
 
-//   const PaymentScreen({
-//     super.key, 
-//     required this.userId, 
-//     required this.amount, 
-//     required this.invoiceId,
-//     required this.period,
-//   });
+  const PaymentScreen({
+    super.key,
+    required this.userId,
+    required this.hoaDonId,
+    required this.tongTien,
+    required this.congNo,
+    required this.nguoiNhanId,
+  });
 
-//   @override
-//   State<PaymentScreen> createState() => _PaymentScreenState();
-// }
+  @override
+  State<PaymentScreen> createState() => _PaymentScreenState();
+}
 
-// class _PaymentScreenState extends State<PaymentScreen> {
-//   late MomoVn _momoPay;
-//   String _paymentStatus = "Đang khởi tạo thanh toán...";
-//   bool _isProcessing = false;
+class _PaymentScreenState extends State<PaymentScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _noteController = TextEditingController();
+  
+  bool _isSubmitting = false;
+  String _selectedMethod = 'ChuyenKhoanNH'; // Mặc định chuyển khoản
 
-//   @override
-//   void initState() {
-//     super.initState();
-//     _momoPay = MomoVn();
-    
-//     // Đăng ký lắng nghe sự kiện trả về từ MoMo
-//     _momoPay.on(MomoVn.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-//     _momoPay.on(MomoVn.EVENT_PAYMENT_ERROR, _handlePaymentError);
+  @override
+  void initState() {
+    super.initState();
+    // Gợi ý sẵn số tiền cần đóng bằng số tiền còn nợ hiện tại
+    _amountController.text = widget.congNo.toInt().toString();
+  }
 
-//     // Tự động kích hoạt ví MoMo sau khi vào màn hình 0.5 giây
-//     Future.delayed(const Duration(milliseconds: 500), () {
-//       _openMomoPayment();
-//     });
-//   }
+String formatMoney(num amount) {
+  // RegExp tìm mỗi vị trí có 3 chữ số để chèn dấu cách
+  RegExp reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
+  return amount.toInt().toString().replaceAllMapped(reg, (Match match) => '${match[1]} ');
+}
 
-//   @override
-//   void dispose() {
-//     _momoPay.clear();
-//     super.dispose();
-//   }
+  Future<void> _submitPayment() async {
+    if (!_formKey.currentState!.validate()) return;
 
-//   void _handlePaymentSuccess(PaymentResponse response) {
-//     setState(() {
-//       _isProcessing = false;
-//       _paymentStatus = "Thành công! Đang đồng bộ hệ thống...";
-//     });
-    
-//     // Hiện thông báo thành công
-//     _showResultDialog(
-//       title: "Thành công",
-//       message: "Giao dịch thành công. Token: ${response.token}",
-//       isSuccess: true,
-//     );
-//     // TODO: Gửi response.token này về Backend PHP của bạn để gọi API xác thực với MoMo
-//   }
+    setState(() {
+      _isSubmitting = true;
+    });
 
-//   void _handlePaymentError(PaymentResponse response) {
-//     setState(() {
-//       _isProcessing = false;
-//       _paymentStatus = "Giao dịch thất bại hoặc bị hủy.";
-//     });
-    
-//     _showResultDialog(
-//       title: "Thất bại",
-//       message: response.message ?? "Người dùng hủy giao dịch hoặc lỗi kết nối.",
-//       isSuccess: false,
-//     );
-//   }
+    // Tạo một mã giao dịch giả lập
+    String mockTransactionId = "TXN${DateTime.now().millisecondsSinceEpoch}";
 
-//   void _openMomoPayment() {
-//     if (_isProcessing) return;
-//     setState(() {
-//       _isProcessing = true;
-//       _paymentStatus = "Đang kết nối ví MoMo...";
-//     });
+    final String url = 'http://10.0.2.2/myapi/src/Controllers/ProcessPayment.php';
 
-//     MomoPaymentInfo options = MomoPaymentInfo(
-//       merchantName: "Hệ thống Phòng Trọ",
-//       merchantCode: "MOMOI9RE20220907", // Mã test mặc định
-//       appScheme: "MOMOI9RE20220907",
-//       amount: widget.amount.toInt(), // Ép kiểu số tiền về dạng Int
-//       orderId: "HD_${widget.invoiceId}_${DateTime.now().millisecondsSinceEpoch}",
-//       orderLabel: "Tiền nhà Kỳ tháng ${widget.period}",
-//       merchantNameLabel: "Thanh toán hóa đơn",
-//       fee: 0,
-//       description: "Thanh toán hóa đơn phòng trọ kỳ tháng ${widget.period}",
-//       username: "user_${widget.userId}",
-//       partnerCode: "MOMOI9RE20220907",
-//       isTestMode: true, partner: '', // Bật true để chạy môi trường thử nghiệm (Sandbox)
-//     );
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {"Content-Type": "application/json"},
+        // 🌟 Đồng bộ viết hoa viết thường chuẩn xác theo file ProcessPayment.php của bạn
+        body: json.encode({
+          "hoadon_id": widget.hoaDonId,
+          "so_tien_thanh_toan": double.parse(_amountController.text),
+          "phuong_thuc": _selectedMethod,
+          "ma_giao_dich": mockTransactionId,
+          "nguoi_nhan_id": widget.nguoiNhanId,
+          "ghiChu": _noteController.text.trim().isEmpty 
+              ? "Khách thuê thanh toán hóa đơn" 
+              : _noteController.text.trim()
+        }),
+      ).timeout(const Duration(seconds: 10));
 
-//     try {
-//       _momoPay.open(options);
-//     } catch (e) {
-//       setState(() {
-//         _isProcessing = false;
-//         _paymentStatus = "Không thể mở ứng dụng MoMo.";
-//       });
-//     }
-//   }
+      final res = json.decode(response.body);
 
-//   void _showResultDialog({required String title, required String message, required bool isSuccess}) {
-//     showDialog(
-//       context: context,
-//       barrierDismissible: false,
-//       builder: (context) => AlertDialog(
-//         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-//         title: Row(
-//           children: [
-//             Icon(isSuccess ? Icons.check_circle : Icons.error, color: isSuccess ? Colors.green : Colors.red),
-//             const SizedBox(width: 8),
-//             Text(title),
-//           ],
-//         ),
-//         content: Text(message),
-//         actions: [
-//           TextButton(
-//             onPressed: () {
-//               Navigator.pop(context); // Đóng Dialog
-//               Navigator.pop(context, isSuccess); // Quay lại HomeScreen (trả về kết quả true/false nếu cần load lại dữ liệu)
-//             },
-//             child: const Text("Xác nhận", style: TextStyle(fontWeight: FontWeight.bold)),
-//           )
-//         ],
-//       ),
-//     );
-//   }
+      if (res['status'] == 'success') {
+        // Hiển thị hộp thoại thông báo trạng thái "Chờ xử lý / Đã ghi nhận" thành công
+        _showSuccessDialog();
+      } else {
+        _showSnackBar("❌ Lỗi: ${res['message']}", Colors.redAccent);
+      }
+    } catch (e) {
+      _showSnackBar("❌ Không thể kết nối đến máy chủ: $e", Colors.redAccent);
+    } finally {
+      setState(() {
+        _isSubmitting = false;
+      });
+    }
+  }
 
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: const Text("Thanh toán MoMo"),
-//         backgroundColor: const Color(0xFF2563EB),
-//         foregroundColor: Colors.white,
-//       ),
-//       body: Center(
-//         child: Padding(
-//           padding: const EdgeInsets.all(24.0),
-//           child: Column(
-//             mainAxisAlignment: MainAxisAlignment.center,
-//             children: [
-//               Image.network(
-//                 'https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png', 
-//                 height: 80, 
-//                 errorBuilder: (c, e, s) => const Icon(Icons.wallet, size: 80, color: Colors.pink)
-//               ),
-//               const SizedBox(height: 24),
-//               Text(
-//                 _paymentStatus,
-//                 textAlign: TextAlign.center,
-//                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Color(0xFF1E293B)),
-//               ),
-//               const SizedBox(height: 32),
-//               if (_isProcessing)
-//                 const CircularProgressIndicator(color: Colors.pink)
-//               else
-//                 ElevatedButton.icon(
-//                   onPressed: _openMomoPayment,
-//                   icon: const Icon(Icons.refresh),
-//                   label: const Text("Thử thanh toán lại"),
-//                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2563EB), foregroundColor: Colors.white),
-//                 )
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
+  // 🌟 Đã bổ sung đầy đủ hàm hiển thị Dialog thành công
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 16),
+              const Icon(Icons.hourglass_top_rounded, color: Colors.orange, size: 60),
+              const SizedBox(height: 18),
+              const Text(
+                "Gửi yêu cầu thành công!",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF1E293B)),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                "Giao dịch của bạn đã được ghi nhận. Hệ thống đang chuyển trạng thái chờ xử lý, chủ trọ sẽ duyệt sớm nhất có thể.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF64748B), fontSize: 14),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context); // Đóng Dialog
+                    Navigator.pop(context, true); // Quay về và reload dữ liệu ở màn trước
+                  },
+                  child: const Text("Đồng ý", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // 🌟 Đã bổ sung đầy đủ hàm hiển thị thông báo SnackBar nhanh
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message), 
+        backgroundColor: color, 
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: const Text("Thanh Toán Hóa Đơn", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF1E293B))),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1E293B), size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: _isSubmitting
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF2563EB)))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // --- KHỐI THÔNG TIN HÓA ĐƠN ---
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [BoxShadow(color: const Color(0xFF0F172A).withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Mã hóa đơn: #${widget.hoaDonId}", style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                          const Divider(height: 24, color: Color(0xFFF1F5F9)),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text("Tổng tiền hóa đơn:", style: TextStyle(color: Color(0xFF1E293B), fontSize: 15)),
+                              Text("${formatMoney(widget.tongTien.toInt())} đ", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E293B))),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text("Số tiền còn nợ:", style: TextStyle(color: Color(0xFF1E293B), fontSize: 15)),
+                              Text("${formatMoney(widget.congNo.toInt())} đ", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.redAccent)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // --- NHẬP SỐ TIỀN MUỐN ĐÓNG ---
+                    const Text("Nhập số tiền muốn thanh toán", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B))),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _amountController,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2563EB)),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white,
+                        suffixText: "đ",
+                        hintText: "Ví dụ: 2000000",
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2)),
+                      ),
+                      validator: (val) {
+                        if (val == null || val.trim().isEmpty) return "Vui lòng nhập số tiền";
+                        double? amount = double.tryParse(val);
+                        if (amount == null || amount <= 0) return "Số tiền không hợp lệ";
+                        if (amount > widget.congNo) return "Số tiền vượt quá số nợ hiện tại (${widget.congNo.toInt()} đ)";
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 20),
+
+                    // --- PHƯƠNG THỨC THANH TOÁN ---
+                    const Text("Phương thức thanh toán", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B))),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: _selectedMethod,
+                      items: const [
+                        DropdownMenuItem(value: 'ChuyenKhoanNH', child: Text('Chuyển khoản ngân hàng')),
+                        DropdownMenuItem(value: 'Tiền mặt', child: Text('Tiền mặt')),
+                      ],
+                      onChanged: (val) => setState(() => _selectedMethod = val!),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white,
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // --- GHI CHÚ ---
+                    const Text("Ghi chú (Nếu có)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B))),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _noteController,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white,
+                        hintText: "Nội dung lời nhắn gửi chủ nhà...",
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // --- NÚT XÁC NHẬN ---
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 0,
+                        ),
+                        onPressed: _submitPayment,
+                        child: const Text("Xác nhận thanh toán", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+}
+

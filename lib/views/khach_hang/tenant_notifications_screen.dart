@@ -280,31 +280,32 @@ class _TenantNotificationsScreenState extends State<TenantNotificationsScreen> {
                                         ),
                                       ],
                                     ),
-                                    if (isInvoiceUrgent) ...[
-                                      const SizedBox(height: 12),
-                                      SizedBox(
-                                        width: double.infinity,
-                                        height: 38,
-                                        child: ElevatedButton.icon(
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) => TenantInvoiceScreen(userId: widget.userId),
-                                              ),
-                                            );
-                                          },
-                                          icon: const Icon(Icons.receipt_long_rounded, size: 16, color: Colors.white),
-                                          label: const Text("Đóng tiền ngay", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.orange.shade700,
-                                            elevation: 0,
-                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                          ),
-                                        ),
-                                      )
-                                    ]
+                                    // if (isInvoiceUrgent) ...[
+                                    //   const SizedBox(height: 12),
+                                    //   SizedBox(
+                                    //     width: double.infinity,
+                                    //     height: 38,
+                                    //     child: ElevatedButton.icon(
+                                    //       onPressed: () {
+                                    //         Navigator.push(
+                                    //           context,
+                                    //           MaterialPageRoute(
+                                    //             builder: (context) => TenantInvoiceScreen(userId: widget.userId),
+                                    //           ),
+                                    //         );
+                                    //       },
+                                    //       icon: const Icon(Icons.receipt_long_rounded, size: 16, color: Colors.white),
+                                    //       label: const Text("Đóng tiền ngay", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
+                                    //       style: ElevatedButton.styleFrom(
+                                    //         backgroundColor: Colors.orange.shade700,
+                                    //         elevation: 2,
+                                    //         shadowColor: Colors.black.withOpacity(0.4),
+                                    //         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    //       ),
+                                    //     ),
+                                    //   )
+                                    // ]
                                   ],
                                 ),
                               ),
