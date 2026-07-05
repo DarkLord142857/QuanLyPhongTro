@@ -241,15 +241,22 @@ class _KhachHangHomeScreenState extends State<KhachHangHomeScreen> {
                 clipBehavior: Clip.none, 
                 children: [
                   _buildHeaderButton(Icons.notifications_none_rounded, () async {
-                    // Chuyển sang màn hình thông báo và đợi cho đến khi họ bấm nút thoát quay lại
-                    await Navigator.push(
+                    // 🛠️ ĐÃ SỬA: Thêm biến 'hasChanged' để hứng kết quả 'true/false' từ màn hình thông báo trả về
+                    final hasChanged = await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => TenantNotificationsScreen(userId: widget.userId),
                       ),
                     );
-                    // Khi từ màn hình thông báo BACK quay lại, tính toán lại để mất chấm đỏ luôn
-                    _checkUnreadNotifications();
+                    
+                    // 🛠️ ĐÃ SỬA: Cho dù 'hasChanged' bằng true hay người dùng dùng cử chỉ vuốt, 
+                    // ta chủ động gọi cả hai hàm load lại dữ liệu tổng và đếm thông báo để đồng bộ tuyệt đối.
+                    if (mounted) {
+                      _checkUnreadNotifications(); // Hàm đếm thông báo riêng của bạn
+                      if (hasChanged == true) {
+                        _fetchHomeData(); // Tải lại toàn bộ dữ liệu trang chủ (nếu có hàm này) để cập nhật lại UI
+                      }
+                    }
                   }),
                   
                   // Chỉ hiển thị nếu thực sự có thông báo mới hơn ID đã đọc gần nhất

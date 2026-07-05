@@ -15,6 +15,7 @@ class _TenantNotificationsScreenState extends State<TenantNotificationsScreen> {
   List _notifications = [];
   bool _isLoading = true;
   String _errorMsg = '';
+  bool _hasAnyReadChanged = false;
 
   @override
   void initState() {
@@ -69,6 +70,7 @@ class _TenantNotificationsScreenState extends State<TenantNotificationsScreen> {
       // Bước 1: Cập nhật giao diện Local lập tức để xóa chấm đỏ trên dòng này
       setState(() {
         _notifications[index]['trangThai'] = 1;
+        _hasAnyReadChanged = true; // Đánh dấu có thay đổi trạng thái đã xem
       });
 
       try {
@@ -118,7 +120,13 @@ class _TenantNotificationsScreenState extends State<TenantNotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result){
+        if(didPop) return;
+        Navigator.pop(context, _hasAnyReadChanged); // Trả về true nếu có thông báo đã xem
+      },
+      child: Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text("Thông Báo Từ Chủ Trọ", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF1E293B))),
@@ -127,7 +135,7 @@ class _TenantNotificationsScreenState extends State<TenantNotificationsScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1E293B), size: 20),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context, _hasAnyReadChanged), // Trả về true nếu có thông báo đã xem
         ),
       ),
       body: _isLoading
@@ -156,10 +164,16 @@ class _TenantNotificationsScreenState extends State<TenantNotificationsScreen> {
                           final item = _notifications[index];
                           final int notiId = int.tryParse(item['id'].toString()) ?? 0;
                           final int isRead = int.tryParse(item['trangThai'].toString()) ?? 0; // 0: chưa xem, 1: đã xem
-
+                          final String vaiTro = item['vaiTroNguoiGui'] ?? '';
+                          final String tenNguoiGui = item['tenNguoiGui'] ?? 'Hệ thống';
                           final String title = item['tieuDe'] ?? "Thông báo chung";
                           final String content = item['noiDung'] ?? "";
-                          final String sender = item['tenChuTro'] ?? "Chủ phòng trọ";
+                          String nhanNguoiGui = "Hệ thống tự động";
+                            if (vaiTro == 'ChuTro' || vaiTro == 'Admin') {
+                              nhanNguoiGui = "Từ chủ trọ: $tenNguoiGui";
+                            } else if (item['tieuDe'].toString().contains("yêu cầu dịch vụ")) {
+                              nhanNguoiGui = "Yêu cầu dịch vụ cá nhân";
+                            }
                           final String timeStr = _formatDateTime(item['createdDate']);
 
                           final bool isInvoiceUrgent = title.toLowerCase().contains("hóa đơn") || 
@@ -249,14 +263,15 @@ class _TenantNotificationsScreenState extends State<TenantNotificationsScreen> {
                                       mainAxisAlignment: MainAxisAlignment.start,
                                       children: [
                                         Text(
-                                          "Người gửi: $sender", 
+                                          nhanNguoiGui, 
                                           style: TextStyle(
                                             fontSize: 12, 
                                             fontWeight: FontWeight.w600, 
                                             color: isRead == 1 ? const Color(0xFF4CAF50) : const Color(0xFF64748B)
                                           )
                                         ),
-                                        Text(
+                                        const Spacer(),
+                                        Text(                                        
                                           timeStr, 
                                           style: TextStyle(
                                             fontSize: 11, 
@@ -298,6 +313,7 @@ class _TenantNotificationsScreenState extends State<TenantNotificationsScreen> {
                         },
                       ),
                     ),
+      ),
     );
   }
 }
