@@ -37,114 +37,67 @@ class _PaymentScreenState extends State<PaymentScreen> {
     _amountController.text = widget.congNo.toInt().toString();
   }
 
-String formatMoney(num amount) {
-  // RegExp tìm mỗi vị trí có 3 chữ số để chèn dấu cách
-  RegExp reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
-  return amount.toInt().toString().replaceAllMapped(reg, (Match match) => '${match[1]} ');
-}
+// 🛠️ HÀM ĐÃ ĐƯỢC CẬP NHẬT: Chuyển tiền thành dạng "1 225 000đ" thay vì "1.225.000.0 đ"
+  String formatMoney(num amount) {
+    // Ép kiểu về số nguyên .toInt() để loại bỏ hoàn toàn phần thập phân .0 dư thừa
+    return amount.toInt().toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), 
+      (Match m) => '${m[1]} ' // Thay dấu chấm bằng một khoảng trắng
+    ) + 'đ'; // Viết liền chữ đ vào sau số
+  }
 
+  // 🛠️ HÀM KẾT NỐI API XỬ LÝ GỬI THÔNG TIN THANH TOÁN
   Future<void> _submitPayment() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isSubmitting = true;
-    });
+    setState(() => _isSubmitting = true);
 
-    // Tạo một mã giao dịch giả lập
-    String mockTransactionId = "TXN${DateTime.now().millisecondsSinceEpoch}";
-
-    final String url = 'http://10.0.2.2/myapi/src/Controllers/ProcessPayment.php';
+    // ⚡ LƯU Ý: Thay địa chỉ IP Localhost phù hợp với môi trường giả lập (10.0.2.2 cho Android Emulator)
+    const String apiUrl = "http://10.0.2.2/myapi/src/Controllers/ProcessPayment.php";
 
     try {
+      final double inputAmount = double.parse(_amountController.text.trim());
+
+      // Đóng gói JSON truyền lên khớp 100% các biến tham số trong ProcessPayment.php
+      final Map<String, dynamic> requestBody = {
+        "hoadon_id": widget.hoaDonId,
+        "so_tien_thanh_toan": inputAmount,
+        "phuong_thuc": _selectedMethod,
+        "ma_giao_dich": "GD_${DateTime.now().millisecondsSinceEpoch}", // Tự sinh mã giao dịch mẫu tránh trùng lặp
+        "nguoi_nhan_id": widget.nguoiNhanId,
+        "ghi_chu": _noteController.text.trim(),
+      };
+
       final response = await http.post(
-        Uri.parse(url),
-        headers: {"Content-Type": "application/json"},
-        // 🌟 Đồng bộ viết hoa viết thường chuẩn xác theo file ProcessPayment.php của bạn
-        body: json.encode({
-          "hoadon_id": widget.hoaDonId,
-          "so_tien_thanh_toan": double.parse(_amountController.text),
-          "phuong_thuc": _selectedMethod,
-          "ma_giao_dich": mockTransactionId,
-          "nguoi_nhan_id": widget.nguoiNhanId,
-          "ghiChu": _noteController.text.trim().isEmpty 
-              ? "Khách thuê thanh toán hóa đơn" 
-              : _noteController.text.trim()
-        }),
-      ).timeout(const Duration(seconds: 10));
+        Uri.parse(apiUrl),
+        headers: {"Content-Type": "application/json; charset=UTF-8"},
+        body: jsonEncode(requestBody),
+      );
 
-      final res = json.decode(response.body);
-
-      if (res['status'] == 'success') {
-        // Hiển thị hộp thoại thông báo trạng thái "Chờ xử lý / Đã ghi nhận" thành công
-        _showSuccessDialog();
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        
+        if (responseData['status'] == 'success') {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(responseData['message'] ?? "Gửi yêu cầu thành công!"), backgroundColor: Colors.green),
+          );
+          // Trả trạng thái về màn hình trước để cập nhật giao diện ngay lập tức
+          Navigator.pop(context, true);
+        } else {
+          throw Exception(responseData['message'] ?? "Lỗi từ hệ thống xử lý.");
+        }
       } else {
-        _showSnackBar("❌ Lỗi: ${res['message']}", Colors.redAccent);
+        throw Exception("Lỗi kết nối Server (Mã lỗi: ${response.statusCode})");
       }
     } catch (e) {
-      _showSnackBar("❌ Không thể kết nối đến máy chủ: $e", Colors.redAccent);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Thất bại: ${e.toString().replaceAll('Exception:', '')}"), backgroundColor: Colors.red),
+      );
     } finally {
-      setState(() {
-        _isSubmitting = false;
-      });
+      if (mounted) setState(() => _isSubmitting = false);
     }
-  }
-
-  // 🌟 Đã bổ sung đầy đủ hàm hiển thị Dialog thành công
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 16),
-              const Icon(Icons.hourglass_top_rounded, color: Colors.orange, size: 60),
-              const SizedBox(height: 18),
-              const Text(
-                "Gửi yêu cầu thành công!",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF1E293B)),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                "Giao dịch của bạn đã được ghi nhận. Hệ thống đang chuyển trạng thái chờ xử lý, chủ trọ sẽ duyệt sớm nhất có thể.",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFF64748B), fontSize: 14),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  onPressed: () {
-                    Navigator.pop(context); // Đóng Dialog
-                    Navigator.pop(context, true); // Quay về và reload dữ liệu ở màn trước
-                  },
-                  child: const Text("Đồng ý", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // 🌟 Đã bổ sung đầy đủ hàm hiển thị thông báo SnackBar nhanh
-  void _showSnackBar(String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message), 
-        backgroundColor: color, 
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   @override
@@ -152,121 +105,105 @@ String formatMoney(num amount) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text("Thanh Toán Hóa Đơn", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF1E293B))),
+        title: const Text("Thanh toán hóa đơn", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF1E293B))),
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1E293B), size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF1E293B), size: 20),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: _isSubmitting
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF2563EB)))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(20.0),
-              child: Form(
-                key: _formKey,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Thẻ hiển thị tóm tắt tiền nợ
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                  borderRadius: BorderRadius.circular(20),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- KHỐI THÔNG TIN HÓA ĐƠN ---
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [BoxShadow(color: const Color(0xFF0F172A).withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Mã hóa đơn: #${widget.hoaDonId}", style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
-                          const Divider(height: 24, color: Color(0xFFF1F5F9)),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text("Tổng tiền hóa đơn:", style: TextStyle(color: Color(0xFF1E293B), fontSize: 15)),
-                              Text("${formatMoney(widget.tongTien.toInt())} đ", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E293B))),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text("Số tiền còn nợ:", style: TextStyle(color: Color(0xFF1E293B), fontSize: 15)),
-                              Text("${formatMoney(widget.congNo.toInt())} đ", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.redAccent)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // --- NHẬP SỐ TIỀN MUỐN ĐÓNG ---
-                    const Text("Nhập số tiền muốn thanh toán", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B))),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _amountController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2563EB)),
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.white,
-                        suffixText: "đ",
-                        hintText: "Ví dụ: 2000000",
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2)),
-                      ),
-                      validator: (val) {
-                        if (val == null || val.trim().isEmpty) return "Vui lòng nhập số tiền";
-                        double? amount = double.tryParse(val);
-                        if (amount == null || amount <= 0) return "Số tiền không hợp lệ";
-                        if (amount > widget.congNo) return "Số tiền vượt quá số nợ hiện tại (${widget.congNo.toInt()} đ)";
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
-
-                    // --- PHƯƠNG THỨC THANH TOÁN ---
-                    const Text("Phương thức thanh toán", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B))),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<String>(
-                      value: _selectedMethod,
-                      items: const [
-                        DropdownMenuItem(value: 'ChuyenKhoanNH', child: Text('Chuyển khoản ngân hàng')),
-                        DropdownMenuItem(value: 'Tiền mặt', child: Text('Tiền mặt')),
+                    const Text("Tổng nợ cần thanh toán", style: TextStyle(color: Colors.white, fontSize: 13)),
+                    const SizedBox(height: 6),
+                    Text(formatMoney(widget.congNo), style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                    const Divider(color: Colors.white24, height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("Tổng tiền gốc hóa đơn:", style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13)),
+                        Text(formatMoney(widget.tongTien), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
                       ],
-                      onChanged: (val) => setState(() => _selectedMethod = val!),
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.white,
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // --- GHI CHÚ ---
-                    const Text("Ghi chú (Nếu có)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B))),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _noteController,
-                      maxLines: 2,
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.white,
-                        hintText: "Nội dung lời nhắn gửi chủ nhà...",
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // --- NÚT XÁC NHẬN ---
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
+                    )
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text("Số tiền muốn đóng", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF334155))),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _amountController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.monetization_on_outlined, color: Color(0xFF64748B)),
+                  suffixText: "đ",
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                ),
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) return "Vui lòng điền số tiền";
+                  final numVal = double.tryParse(val.trim());
+                  if (numVal == null || numVal <= 0) return "Số tiền không hợp lệ";
+                  if (numVal > widget.congNo) return "Không đóng vượt quá số tiền còn nợ";
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+              const Text("Hình thức chuyển tiền", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF334155))),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _selectedMethod,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.account_balance_wallet_outlined, color: Color(0xFF64748B)),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                ),
+                items: const [
+                  DropdownMenuItem(value: "ChuyenKhoanNH", child: Text("Chuyển khoản Ngân hàng")),
+                  DropdownMenuItem(value: "TienMat", child: Text("Trả tiền mặt cầm tay")),
+                ],
+                onChanged: (val) => setState(() => _selectedMethod = val ?? 'ChuyenKhoanNH'),
+              ),
+              const SizedBox(height: 20),
+              const Text("Lời nhắn / Ghi chú", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF334155))),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _noteController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: "Nhập nội dung ghi chú kèm theo (nếu có)...",
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: _isSubmitting
+                    ? const Center(child: CircularProgressIndicator(color: Color(0xFF2563EB)))
+                    : ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF2563EB),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -275,12 +212,11 @@ String formatMoney(num amount) {
                         onPressed: _submitPayment,
                         child: const Text("Xác nhận thanh toán", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                       ),
-                    ),
-                  ],
-                ),
               ),
-            ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
-

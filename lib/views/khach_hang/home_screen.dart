@@ -398,45 +398,42 @@ class _KhachHangHomeScreenState extends State<KhachHangHomeScreen> {
                             height: 40,
                             child: ElevatedButton(
                               onPressed: () {
-                                // Điều hướng sang màn hình thanh toán chi tiết, truyền ID hóa đơn tương ứng
-                                debugPrint("Bấm thanh toán hóa đơn ID: $invoiceId");
-                                // Kiểm tra xem danh sách hóa đơn từ API đã tải về được chưa hoặc bị trống không
-                                if (_invoices.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text("Hiện tại bạn không có hóa đơn nào cần thanh toán hoặc dữ liệu đang tải.")),
-                                  );
-                                  return;
-                                }
-
-                                // Lấy ra hóa đơn đầu tiên (mới nhất) chưa được thanh toán hoàn toàn
-                                final latestInvoice = _invoices.firstWhere(
-                                  (element) => element['TrangThaiThanhToan'] != 'DaThanhToan',
-                                  orElse: () => _invoices[0],
-                                );
-                                
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => PaymentScreen(
-                                      userId: widget.userId,
-                                                // Sử dụng int.tryParse để an toàn hơn, nếu lỗi hoặc null sẽ lấy mặc định là 0
-                                                hoaDonId: int.tryParse(latestInvoice['Id']?.toString() ?? '') ?? 0, 
-                                                
-                                                // Đối với double (tiền bạc), nếu null sẽ lấy mặc định là 0.0
-                                                tongTien: double.tryParse(latestInvoice['TongTienHoaDon']?.toString() ?? '') ?? 0.0,
-                                                congNo: double.tryParse(latestInvoice['CongNo']?.toString() ?? '') ?? 0.0,
-                                                
-                                                // ID chủ trọ
-                                                nguoiNhanId: int.tryParse(latestInvoice['NguoiNhanId']?.toString() ?? '') ?? 0,
-                                    ),
-                                  ),
-                                ).then((value) {
-                                  if (value == true) {
-                                    // Nếu thanh toán xong bấm Đồng ý, tiến hành tải lại danh sách hóa đơn tại đây
-                                    _loadInvoicesData(); 
+                                  // Điều hướng sang màn hình thanh toán chi tiết, truyền ID hóa đơn tương ứng
+                                  debugPrint("Bấm thanh toán hóa đơn ID: $invoiceId");
+                                  
+                                  // Kiểm tra xem danh sách hóa đơn từ API đã tải về được chưa hoặc bị trống không
+                                  if (_invoices.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text("Hiện tại bạn không có hóa đơn nào cần thanh toán hoặc dữ liệu đang tải.")),
+                                    );
+                                    return;
                                   }
-                                });
-                              },
+
+                                  // ✅ SỬA TẠI ĐÂY: Tìm chính xác hóa đơn có Id trùng với hóa đơn vừa được nhấn nút
+                                  final selectedInvoice = _invoices.firstWhere(
+                                    (element) => (int.tryParse(element['Id']?.toString() ?? '') ?? 0) == invoiceId,
+                                    orElse: () => _invoices[0], // Dự phòng nếu không tìm thấy thì lấy cái đầu tiên
+                                  );
+                                  
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => PaymentScreen(
+                                        userId: widget.userId,
+                                        // ✅ Đổi hết từ latestInvoice sang selectedInvoice để nhận đúng dữ liệu dòng được chọn
+                                        hoaDonId: int.tryParse(selectedInvoice['Id']?.toString() ?? '') ?? 0, 
+                                        tongTien: double.tryParse(selectedInvoice['TongTienHoaDon']?.toString() ?? '') ?? 0.0,
+                                        congNo: double.tryParse(selectedInvoice['CongNo']?.toString() ?? '') ?? 0.0,
+                                        nguoiNhanId: int.tryParse(selectedInvoice['NguoiNhanId']?.toString() ?? '') ?? 0,
+                                      ),
+                                    ),
+                                  ).then((value) {
+                                    if (value == true) {
+                                      // Nếu thanh toán xong bấm Đồng ý, tiến hành tải lại danh sách hóa đơn tại đây
+                                      _loadInvoicesData(); 
+                                    }
+                                  });
+                                },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF2563EB),
                                 foregroundColor: Colors.white,

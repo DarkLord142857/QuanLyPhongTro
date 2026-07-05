@@ -114,7 +114,7 @@ class _TenantInvoiceScreenState extends State<TenantInvoiceScreen> {
                           final double totalPrice = (invoice['TotalPrice'] as num).toDouble();
                           final double debt = (invoice['Debt'] as num).toDouble();
                           final int invoiceId = invoice['InvoiceId'] ?? 0;
-                          return InkWell(
+                                return InkWell(
                               borderRadius: BorderRadius.circular(16),
                               onTap: () {
                                 if (invoiceId > 0) {
