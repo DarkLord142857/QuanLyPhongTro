@@ -15,7 +15,7 @@ class _AdminServiceRequestScreenState extends State<AdminServiceRequestScreen> {
   List<dynamic> _requests = [];
   List<dynamic> _catalog = [];
   bool _isLoading = true;
-  final String _urlBase = "http://10.0.2.2/myapi/src/Controllers";
+  final String _urlBase = "http://192.168.1.250/myapi/src/Controllers";
 
   @override
   void initState() {

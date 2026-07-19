@@ -30,7 +30,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
 
       // Đường dẫn API xử lý đăng ký (Laragon)
-      final url = Uri.parse('http://10.0.2.2/myapi/src/Controllers/RegisterController.php');
+      final url = Uri.parse('http://192.168.1.250/myapi/src/Controllers/RegisterController.php');
 
       try {
         final response = await http.post(
@@ -117,7 +117,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 children: [
                   const Text(
                     "Tạo tài khoản mới",
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.blueAccent),
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.green),
                   ),
                   const SizedBox(height: 8),
                   const Text("Vui lòng điền đầy đủ các thông tin dưới đây", style: TextStyle(color: Colors.grey)),
@@ -188,7 +188,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleRegister,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
+                      backgroundColor: Colors.green,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),

@@ -13,7 +13,7 @@ class AdminDeletedHousesScreen extends StatefulWidget {
 
 class _AdminDeletedHousesScreenState extends State<AdminDeletedHousesScreen> {
   late Future<List<HouseModel>> _deletedHousesFuture;
-  final String _baseUrl = "http://10.0.2.2/myapi/src/Controllers/Admin";
+  final String _baseUrl = "http://192.168.1.250/myapi/src/Controllers/Admin";
 
   @override
   void initState() {

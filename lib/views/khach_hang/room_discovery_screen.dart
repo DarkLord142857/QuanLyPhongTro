@@ -41,8 +41,8 @@ class _RoomDiscoveryScreenState extends State<RoomDiscoveryScreen> {
     });
 
     try {
-      // Endpoint API chạy dưới máy ảo Android kết nối tới Localhost (Laragon/XAMPP) via IP 10.0.2.2
-      final url = Uri.parse('http://10.0.2.2/myapi/src/Controllers/RoomDiscoveryController.php');
+      // Endpoint API chạy dưới máy ảo Android kết nối tới Localhost (Laragon/XAMPP) via IP 192.168.1.250
+      final url = Uri.parse('http://192.168.1.250/myapi/src/Controllers/RoomDiscoveryController.php');
       final response = await http.get(url).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
@@ -234,9 +234,9 @@ class _RoomDiscoveryScreenState extends State<RoomDiscoveryScreen> {
                                             width: double.infinity,                                           
                                             height: 180,
                                             color: const Color(0xFFF1F5F9),
-                                            child: room['ThumbnailUrl'] != null && room['ThumbnailUrl'].toString().isNotEmpty
+                                            child: room['HinhAnhDaiDien'] != null && room['HinhAnhDaiDien'].toString().isNotEmpty
                                                 ? Image.network(
-                                                    room['ThumbnailUrl'],
+                                                    room['HinhAnhDaiDien'],
                                                     fit: BoxFit.cover,
                                                     errorBuilder: (context, error, stackTrace) => _buildDefaultThumbnail(),
                                                   )

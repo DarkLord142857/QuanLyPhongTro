@@ -4,11 +4,11 @@ import '../views/auth/login_screen.dart'; // Import màn hình login vào đây
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  // Bỏ SystemUiMode.edgeToEdge để tránh việc giao diện đè lên thanh hệ thống (Status Bar)
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.dark,
-    statusBarBrightness: Brightness.light,
+    statusBarColor: Color(0xFF10B981), // Màu chủ đạo xanh lá
+    statusBarIconBrightness: Brightness.light,
+    statusBarBrightness: Brightness.dark,
   ));
   runApp(const MyApp());
 }
@@ -22,7 +22,10 @@ class MyApp extends StatelessWidget {
       title: 'Quản Lý Phòng Trọ',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF10B981),
+          primary: const Color(0xFF10B981),
+        ),
         useMaterial3: true,
       ),
       builder: (context, child) {

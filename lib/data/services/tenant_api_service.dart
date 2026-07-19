@@ -4,11 +4,15 @@ import '../models/tenant_model.dart';
 
 class TenantApiService {
   // Đồng bộ IP máy ảo Android nội bộ trùng với file landlord_home_screen.dart của bạn
-  static const String baseUrl = 'http://10.0.2.2/myapi/src/Controllers'; 
+  static const String baseUrl = 'http://192.168.1.250/myapi/src/Controllers';
 
-  static Future<List<TenantModel>> fetchTenants() async {
+  static Future<List<TenantModel>> fetchTenants({int? houseId, int? landlordId}) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/GetTenant.php'));
+      String url = '$baseUrl/GetTenant.php?';
+      if (houseId != null) url += 'house_id=$houseId&';
+      if (landlordId != null) url += 'landlord_id=$landlordId&';
+      
+      final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
         if (data['status'] == 'success') {
@@ -69,10 +73,13 @@ class TenantApiService {
     }
   }
 
-    // Thêm hàm này vào bên trong class TenantApiService của file lib/data/services/tenant_api_service.dart
-  static Future<List<Map<String, dynamic>>> fetchAvailableRooms() async {
+  static Future<List<Map<String, dynamic>>> fetchAvailableRooms({int? houseId, int? landlordId}) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/GetAvailableRooms.php'));
+      String url = '$baseUrl/GetAvailableRooms.php?';
+      if (houseId != null) url += 'house_id=$houseId&';
+      if (landlordId != null) url += 'landlord_id=$landlordId&';
+
+      final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
         if (data['status'] == 'success' && data['data'] != null) {

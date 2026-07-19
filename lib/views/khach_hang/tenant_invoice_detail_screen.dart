@@ -30,7 +30,7 @@ class _TenantInvoiceDetailScreenState extends State<TenantInvoiceDetailScreen> {
 
     try {
       // Gọi đến API GetInvoiceDetail.php của bạn
-      final url = Uri.parse('http://10.0.2.2/myapi/src/Controllers/GetInvoiceDetail.php?InvoiceId=${widget.invoiceId}');
+      final url = Uri.parse('http://192.168.1.250/myapi/src/Controllers/GetInvoiceDetail.php?InvoiceId=${widget.invoiceId}');
       final response = await http.get(url).timeout(const Duration(seconds: 10));
       final data = jsonDecode(response.body);
 
@@ -120,9 +120,11 @@ class _TenantInvoiceDetailScreenState extends State<TenantInvoiceDetailScreen> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    "Kỳ: ${_detailData?['KyHoaDon']}",
-                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                  Expanded(
+                                    child: Text(
+                                      "Kỳ: ${_detailData?['KyHoaDon']}",
+                                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                    ),
                                   ),
                                   _buildStatusChip(_detailData?['TrangThai'] ?? ''),
                                 ],
@@ -173,10 +175,13 @@ class _TenantInvoiceDetailScreenState extends State<TenantInvoiceDetailScreen> {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(
-                                        service['TenDichVu'],
-                                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                                      Expanded(
+                                        child: Text(
+                                          service['TenDichVu'],
+                                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                                        ),
                                       ),
+                                      const SizedBox(width: 8),
                                       Text(
                                         _formatCurrency(thanhTien),
                                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
@@ -241,7 +246,12 @@ class _TenantInvoiceDetailScreenState extends State<TenantInvoiceDetailScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(fontSize: 14, fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(fontSize: 14, fontWeight: isBold ? FontWeight.bold : FontWeight.normal),
+          ),
+        ),
         Text(
           value,
           style: TextStyle(

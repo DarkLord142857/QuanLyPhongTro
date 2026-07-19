@@ -28,7 +28,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   int _secondsRemaining = 90; // Thời gian 90 giây theo PHP cấu hình
 
   // Đường dẫn API Laragon trên máy ảo Android
-  final String _apiUrl = 'http://10.0.2.2/myapi/src/Controllers/ForgotPasswordController.php';
+  final String _apiUrl = 'http://192.168.1.250/myapi/src/Controllers/ForgotPasswordController.php';
 
 // 🛠️ 3. HÀM KHỞI ĐỘNG ĐỒNG HỒ ĐẾM NGƯỢC
   void _startTimer() {
@@ -272,24 +272,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  //_buildButton("XÁC MINH MÃ OTP", _verifyOtp),
-                  TextButton(
-                    onPressed: _isLoading ? null : _sendOtp,
-                    child: const Text("Tôi chưa nhận được mã? Gửi lại mã mới"),
-                  ),
-                  // 🔥 8. THÊM WIDGET HIỂN THỊ ĐỒNG HỒ ĐẾM NGƯỢC
-                  const SizedBox(height: 12),
-                  Text(
-                    _secondsRemaining > 0
-                        ? "Mã hiệu lực còn lại: ${_formatTime(_secondsRemaining)}"
-                        : "Mã OTP của bạn đã hết hạn!",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: _secondsRemaining > 0 ? Colors.blueGrey : Colors.red,
-                    ),
-                  ),
+                  // //_buildButton("XÁC MINH MÃ OTP", _verifyOtp),
+                  // TextButton(
+                  //   onPressed: _isLoading ? null : _sendOtp,
+                  //   child: const Text("Tôi chưa nhận được mã? Gửi lại mã mới"),
+                  // ),
+                  // // 🔥 8. THÊM WIDGET HIỂN THỊ ĐỒNG HỒ ĐẾM NGƯỢC
+                  // const SizedBox(height: 12),
+                  // Text(
+                  //   _secondsRemaining > 0
+                  //       ? "Mã hiệu lực còn lại: ${_formatTime(_secondsRemaining)}"
+                  //       : "Mã OTP của bạn đã hết hạn!",
+                  //   textAlign: TextAlign.center,
+                  //   style: TextStyle(
+                  //     fontSize: 14,
+                  //     fontWeight: FontWeight.w600,
+                  //     color: _secondsRemaining > 0 ? Colors.blueGrey : Colors.red,
+                  //   ),
+                  // ),
                   const SizedBox(height: 24),
 
                   // 🔥 9. CHỈ CHO PHÉP NHẤN XÁC MINH KHI CÒN THỜI GIAN

@@ -32,7 +32,8 @@ class _LandlordTenantScreenState extends State<LandlordTenantScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final data = await TenantApiService.fetchTenants();
+      // 🔥 NGĂN VÁCH DỮ LIỆU: Chỉ lấy khách thuê của chủ trọ này
+      final data = await TenantApiService.fetchTenants(landlordId: widget.landlordId);
       if (mounted) {
         setState(() {
           _tenants = data;
@@ -48,7 +49,8 @@ class _LandlordTenantScreenState extends State<LandlordTenantScreen> {
 
 Future<void> _loadAvailableRooms([StateSetter? setModalState]) async {
     try {
-      final rooms = await TenantApiService.fetchAvailableRooms();
+      // 🔥 NGĂN VÁCH DỮ LIỆU: Chỉ lấy phòng trống của chủ trọ này
+      final rooms = await TenantApiService.fetchAvailableRooms(landlordId: widget.landlordId);
       if (mounted) {
         setState(() {
           _availableRooms = rooms;
@@ -431,26 +433,7 @@ Future<void> _loadAvailableRooms([StateSetter? setModalState]) async {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () {
-            if (widget.onBackHome != null) {
-              widget.onBackHome!();
-            } else {
-              Navigator.of(context).maybePop();
-            }
-          },
-        ),
-        title: const Text("Quản lý Khách thuê trọ", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-        backgroundColor: const Color(0xFF10B981),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true, 
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _loadData),
-        ],
-      ),
+      // AppBar đã được LandlordMainScreen quản lý chung
       body: RefreshIndicator(
         onRefresh: _loadData,
         color: const Color(0xFF10B981),

@@ -14,7 +14,7 @@ class LandlordManageCatalogScreen extends StatefulWidget {
 class _LandlordManageCatalogScreenState extends State<LandlordManageCatalogScreen> {
   List<dynamic> _services = [];
   bool _isLoading = true;
-  final String _apiUrl = "http://10.0.2.2/myapi/src/Controllers/ManageService.php";
+  final String _apiUrl = "http://192.168.1.250/myapi/src/Controllers/ManageService.php";
 
   @override
   void initState() {

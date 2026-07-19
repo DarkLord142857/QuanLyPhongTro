@@ -7,6 +7,7 @@ import '../auth/forgot_password_screen.dart';
 import '../khach_hang/tenant_main_screen.dart'; // Đảm bảo import đúng file TenantMainScreen của bạn
 import '../chutro/landlord_main_screen.dart'; // Đảm bảo import đúng file LandlordMainScreen của bạn
 import '../admin/admin_house_list_screen.dart'; // Import màn hình danh sách nhà trọ Admin
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -28,12 +29,9 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         _isLoading = true;
       });
-      String username = _usernameController.text.trim();
-      String password = _passwordController.text.trim();
-
+      
       // CẤU HÌNH ĐƯỜNG DẪN API (Thay IP máy tính của bạn nếu chạy máy thật)
-      // Nếu chạy máy ảo Android, giữ nguyên đường dẫn 10.0.2.2 dưới đây:
-      final url = Uri.parse('http://10.0.2.2/myapi/src/Controllers/AuthController.php');
+      final url = Uri.parse('http://192.168.1.250/myapi/src/Controllers/AuthController.php');
 
       try {
         // Gửi request POST lên PHP API dưới dạng JSON body
@@ -57,32 +55,26 @@ class _LoginScreenState extends State<LoginScreen> {
           // Lấy thông tin vai trò (Role) từ database trả về
           String role = responseData['user']['role'];
           String fullName = responseData['user']['fullname'];
-
-          // 🔥 THÊM DÒNG NÀY ĐỂ LẤY ID TỪ DATABASE TRẢ VỀ
           int loggedInUserId = int.parse(responseData['user']['id'].toString());
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Chào mừng $fullName đã quay trở lại!'), backgroundColor: Colors.green),
-          );
 
           // Phân quyền điều hướng dựa vào cột Role trong Database của bạn
           if (role == 'KhachHang') {
-            Navigator.pushReplacement(
-              context,
-            MaterialPageRoute(
-        // 🔥 TRUYỀN ID SANG MÀN HÌNH CHÍNH TẠI ĐÂY
-        builder: (context) => TenantMainScreen(userId: loggedInUserId),
-        ),
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Chào mừng $fullName đã quay trở lại!'), backgroundColor: Colors.green),
             );
-          } else if (role == 'ChuTro') {
-            // Sau này bạn thiết kế thêm màn hình cho Chủ trọ thì điều hướng ở đây
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => LandlordMainScreen(userId: loggedInUserId),
+                builder: (context) => TenantMainScreen(userId: loggedInUserId),
               ),
             );
+          } else if (role == 'ChuTro') {
+            // Kiểm tra quyền quản lý nhà trọ (Sẽ hiện snackbar sau nếu thành công)
+            _checkLandlordAccess(loggedInUserId, fullName);
           } else if (role == 'Admin') {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Chào mừng Admin $fullName!'), backgroundColor: Colors.green),
+            );
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
@@ -91,25 +83,80 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           }
         } else if (responseData['status'] == 'locked') {
-          // 🔥 HIỂN THỊ THÔNG BÁO KHÓA NGAY KHI ĐĂNG NHẬP
+          // HIỂN THỊ THÔNG BÁO KHÓA NGAY KHI ĐĂNG NHẬP
           _showLockedDialog(responseData['message'] ?? "Tài khoản tạm thời không thể truy cập.");
         } else {
-          // Trường hợp API trả về lỗi sai mật khẩu hoặc tài khoản chưa duyệt (Status Code 401, 400)
+          // Trường hợp API trả về lỗi sai mật khẩu hoặc tài khoản chưa duyệt
           String errorMessage = responseData['message'] ?? 'Đăng nhập thất bại';
           _showErrorDialog(errorMessage);
         }
-
       } catch (error) {
         setState(() {
           _isLoading = false;
         });
-        // Báo lỗi nếu không kết nối được tới server PHP (Sai IP, Server chưa bật...)
+        // Báo lỗi nếu không kết nối được tới server PHP
         _showErrorDialog("Không thể kết nối đến máy chủ API. Vui lòng kiểm tra mạng hoặc cấu hình IP!");
       }
     }
   }
 
-  // Hàm phụ trợ hiển thị hộp thoại cảnh báo lỗi bằng tiếng Việt cho đẹp
+  // HÀM KIỂM TRA QUYỀN TRUY CẬP NHÀ TRỌ CỦA CHỦ TRỌ
+  void _checkLandlordAccess(int userId, String fullName) async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await http.get(
+        Uri.parse('http://192.168.1.250/myapi/src/Controllers/GetLandlordDashboard.php?landlord_id=$userId'),
+      ).timeout(const Duration(seconds: 10));
+      
+      final data = jsonDecode(response.body);
+      setState(() => _isLoading = false);
+
+      if (data['status'] == 'no_house' || data['status'] == 'house_deleted') {
+        _showNoAccessDialog(data['message'] ?? "Bạn không có quyền truy cập hệ thống.");
+      } else {
+        // Có nhà trọ quản lý -> Hiện thông báo chào mừng và cho phép vào
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Chào mừng $fullName đã quay trở lại!'), backgroundColor: Colors.green),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => LandlordMainScreen(userId: userId)),
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _showErrorDialog("Lỗi hệ thống khi kiểm tra quyền quản lý nhà trọ.");
+    }
+  }
+
+  // HÀM HIỂN THỊ DIALOG KHI CHỦ TRỌ CHƯA CÓ NHÀ QUẢN LÝ
+  void _showNoAccessDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.house_siding_rounded, color: Colors.orange),
+            SizedBox(width: 10),
+            Text("Thông báo truy cập", style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+            child: const Text("Đã hiểu", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Hàm phụ trợ hiển thị hộp thoại cảnh báo lỗi bằng tiếng Việt
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
@@ -132,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // 🔥 HÀM HIỂN THỊ DIALOG KHI NHÀ TRỌ BỊ KHÓA
+  // HÀM HIỂN THỊ DIALOG KHI TÀI KHOẢN BỊ KHÓA
   void _showLockedDialog(String message) {
     showDialog(
       context: context,
@@ -179,15 +226,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Icon hoặc Logo ứng dụng
                   const Icon(
                     Icons.home_work_rounded,
                     size: 80,
                     color: Color(0xFF10B981),
                   ),
                   const SizedBox(height: 16),
-                  
-                  // Tiêu đề
                   const Text(
                     "TÌM PHÒNG TRỌ",
                     textAlign: TextAlign.center,
@@ -203,8 +247,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(color: Colors.grey),
                   ),
                   const SizedBox(height: 40),
-
-                  // Ô nhập Username
                   TextFormField(
                     controller: _usernameController,
                     keyboardType: TextInputType.emailAddress,
@@ -226,8 +268,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   const SizedBox(height: 20),
-
-                  // Ô nhập Password
                   TextFormField(
                     controller: _passwordController,
                     obscureText: !_isPasswordVisible,
@@ -257,7 +297,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       return null;
                     },
                   ),
-                  // --- THÀNH PHẦN MỚI THÊM: QUÊN MẬT KHẨU NẰM DƯỚI Ô MẬT KHẨU ---
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -270,14 +309,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text("Quên mật khẩu?", style: TextStyle(color: Colors.blueAccent)),
                     ),
                   ),
-
                   const SizedBox(height: 30),
-
-                  // Nút Đăng nhập
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF10B981),
+                      backgroundColor: const Color(0xFF10B981),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

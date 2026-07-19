@@ -31,7 +31,7 @@ class _TenantPaymentHistoryScreenState extends State<TenantPaymentHistoryScreen>
     try {
       // Kết nối đến API GetPaymentHistory.php trên Laragon của bạn
       final url = Uri.parse(
-          'http://10.0.2.2/myapi/src/Controllers/GetPaymentHistory.php?UserId=${widget.userId}');
+          'http://192.168.1.250/myapi/src/Controllers/GetPaymentHistory.php?UserId=${widget.userId}');
       
       final response = await http.get(url).timeout(const Duration(seconds: 10));
       final data = jsonDecode(response.body);

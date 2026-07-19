@@ -47,7 +47,7 @@ class _KhachHangHomeScreenState extends State<KhachHangHomeScreen> {
 
       // 🌟 1. SỬA LẠI HÀM CHECK THÔNG BÁO: Đếm trực tiếp từ trangThai (0 = Chưa đọc) của database
         Future<void> _checkUnreadNotifications() async {
-          final String url = 'http://10.0.2.2/myapi/src/Controllers/GetTenantNotifications.php?user_id=${widget.userId}';
+          final String url = 'http://192.168.1.250/myapi/src/Controllers/GetTenantNotifications.php?user_id=${widget.userId}';
           try {
             // Thêm timeout 3 giây để tránh treo main thread
             final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 3));
@@ -88,7 +88,7 @@ class _KhachHangHomeScreenState extends State<KhachHangHomeScreen> {
 
             // Đường dẫn API lấy danh sách hóa đơn của Khách thuê (Thay đổi URL cho đúng với dự án của bạn)
             // Truyền kèm widget.userId để lấy đúng hóa đơn của người đang đăng nhập
-            final String url = 'http://10.0.2.2/myapi/src/Controllers/GetTenantInvoices.php?user_id=${widget.userId}';
+            final String url = 'http://192.168.1.250/myapi/src/Controllers/GetTenantInvoices.php?user_id=${widget.userId}';
 
             try {
               final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
@@ -120,7 +120,7 @@ class _KhachHangHomeScreenState extends State<KhachHangHomeScreen> {
           }
   // Thêm hàm này vào trong _KhachHangHomeScreenState
   Future<void> _loadInvoicesData() async {
-    final String url = 'http://10.0.2.2/myapi/src/Controllers/GetTenantInvoices.php?user_id=${widget.userId}';
+    final String url = 'http://192.168.1.250/myapi/src/Controllers/GetTenantInvoices.php?user_id=${widget.userId}';
     try {
       final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
       final res = json.decode(response.body);
@@ -143,7 +143,7 @@ class _KhachHangHomeScreenState extends State<KhachHangHomeScreen> {
     try {
       // widget.userId chính là mã ID chúng ta truyền xuyên màn hình từ trang Login sang
       final url = Uri.parse(
-        'http://10.0.2.2/myapi/src/Controllers/TenantHomeController.php?user_id=${widget.userId}'
+        'http://192.168.1.250/myapi/src/Controllers/TenantHomeController.php?user_id=${widget.userId}'
       );
 
       final response = await http.get(url).timeout(const Duration(seconds: 10));
@@ -188,7 +188,7 @@ class _KhachHangHomeScreenState extends State<KhachHangHomeScreen> {
 
   Future<void> _loadUnpaidInvoice() async {
     // Gọi đến API lấy danh sách hóa đơn của người dùng
-    final String url = 'http://10.0.2.2/myapi/src/Controllers/GetTenantInvoices.php?user_id=${widget.userId}';
+    final String url = 'http://192.168.1.250/myapi/src/Controllers/GetTenantInvoices.php?user_id=${widget.userId}';
     try {
       final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
       final res = json.decode(response.body);

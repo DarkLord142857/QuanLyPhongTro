@@ -30,7 +30,7 @@ class _TenantInvoiceScreenState extends State<TenantInvoiceScreen> {
     });
 
     try {
-      final url = Uri.parse('http://10.0.2.2/myapi/src/Controllers/GetInvoiceController.php?user_id=${widget.userId}');
+      final url = Uri.parse('http://192.168.1.250/myapi/src/Controllers/GetInvoiceController.php?user_id=${widget.userId}');
       final response = await http.get(url).timeout(const Duration(seconds: 10));
       final data = jsonDecode(response.body);
 

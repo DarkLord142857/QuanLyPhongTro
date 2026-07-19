@@ -52,8 +52,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     setState(() => _isSubmitting = true);
 
-    // ⚡ LƯU Ý: Thay địa chỉ IP Localhost phù hợp với môi trường giả lập (10.0.2.2 cho Android Emulator)
-    const String apiUrl = "http://10.0.2.2/myapi/src/Controllers/ProcessPayment.php";
+    // ⚡ LƯU Ý: Thay địa chỉ IP Localhost phù hợp với môi trường giả lập (192.168.1.250 cho Android Emulator)
+    const String apiUrl = "http://192.168.1.250/myapi/src/Controllers/ProcessPayment.php";
 
     try {
       final double inputAmount = double.parse(_amountController.text.trim());

@@ -23,58 +23,52 @@ class AdminMainScreen extends StatefulWidget {
 
 class _AdminMainScreenState extends State<AdminMainScreen> {
   int _selectedIndex = 0;
-  late List<Widget> _screens;
-
-  @override
-  void initState() {
-    super.initState();
-    _screens = [
-      AdminHomeScreen(userId: widget.userId, houseName: widget.houseName, houseId: widget.houseId),
-      AdminRoomsScreen(onBackHome: () => setState(() => _selectedIndex = 0)),
-      AdminTenantScreen(landlordId: widget.userId, onBackHome: () => setState(() => _selectedIndex = 0)),
-      AdminAccountScreen(landlordId: widget.userId, onBackHome: () => setState(() => _selectedIndex = 0)),
-    ];
-  }
 
   @override
   Widget build(BuildContext context) {
+    // Danh sách các màn hình con
+    final List<Widget> screens = [
+      AdminHomeScreen(userId: widget.userId, houseName: widget.houseName, houseId: widget.houseId),
+      AdminRoomsScreen(adminId: widget.userId, houseId: widget.houseId, onBackHome: () => setState(() => _selectedIndex = 0)),
+      AdminTenantScreen(landlordId: widget.userId, houseId: widget.houseId, onBackHome: () => setState(() => _selectedIndex = 0)),
+      AdminAccountScreen(landlordId: widget.userId, houseId: widget.houseId, onBackHome: () => setState(() => _selectedIndex = 0)),
+    ];
+
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          padding: const EdgeInsets.only(top: 4, bottom: 4),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0F172A).withOpacity(0.05),
-                blurRadius: 25,
-                offset: const Offset(0, -10),
-              ),
-            ],
-          ),
-          child: BottomNavigationBar(
-            currentIndex: _selectedIndex,
-            onTap: (index) => setState(() => _selectedIndex = index),
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.white,
-            selectedItemColor: Colors.blue, // Màu xanh dương cho Admin
-            unselectedItemColor: const Color(0xFF94A3B8),
-            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
-            iconSize: 24,
-            elevation: 0,
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Tổng quan'),
-              BottomNavigationBarItem(icon: Icon(Icons.home_work_rounded), label: 'Phòng trọ'), 
-              BottomNavigationBarItem(icon: Icon(Icons.receipt_long_rounded), label: 'Hợp đồng'),
-              BottomNavigationBarItem(icon: Icon(Icons.account_circle_rounded), label: 'Tài khoản'),
-            ],
-          ),
+      appBar: AppBar(
+        title: Text(
+          _selectedIndex == 0 ? widget.houseName : 
+          (_selectedIndex == 1 ? "Quản Lý Phòng" : 
+          (_selectedIndex == 2 ? "Quản Lý Khách" : "Tài Khoản Admin")),
+          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
         ),
+        backgroundColor: const Color(0xFF10B981),
+        centerTitle: true,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+          tooltip: "Quay lại danh sách nhà",
+        ),
+      ),
+      body: screens[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) => setState(() => _selectedIndex = index),
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: const Color(0xFF10B981),
+        unselectedItemColor: const Color(0xFF94A3B8),
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
+        iconSize: 26,
+        elevation: 15,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Tổng quan'),
+          BottomNavigationBarItem(icon: Icon(Icons.home_work_rounded), label: 'Phòng trọ'), 
+          BottomNavigationBarItem(icon: Icon(Icons.receipt_long_rounded), label: 'Hợp đồng'),
+          BottomNavigationBarItem(icon: Icon(Icons.account_circle_rounded), label: 'Tài khoản'),
+        ],
       ),
     );
   }

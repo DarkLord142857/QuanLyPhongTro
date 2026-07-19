@@ -31,7 +31,7 @@ class _TenantContractScreenState extends State<TenantContractScreen> {
     
     try {
       // 🌟 Kết nối đến đúng file API xử lý thuộc tính isActive của bạn
-      final url = Uri.parse('http://10.0.2.2/myapi/src/Controllers/GetContractController.php?user_id=${widget.userId}');
+      final url = Uri.parse('http://192.168.1.250/myapi/src/Controllers/GetContractController.php?user_id=${widget.userId}');
       final response = await http.get(url).timeout(const Duration(seconds: 10));
       final data = jsonDecode(response.body);
 

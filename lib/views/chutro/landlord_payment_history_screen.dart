@@ -16,10 +16,10 @@ class _LandlordPaymentHistoryScreenState extends State<LandlordPaymentHistoryScr
   bool _isProcessing = false; // Trạng thái đợi gọi API duyệt thu tiền
   
   // 🛠️ ĐƯỜNG DẪN API LẤY DANH SÁCH LỊCH SỬ DÒNG TIỀN GỐC CỦA BẠN
-  final String _apiUrl = "http://10.0.2.2/myapi/src/Controllers/GetPaymentHistoryLandlord.php";
+  final String _apiUrl = "http://192.168.1.250/myapi/src/Controllers/GetPaymentHistoryLandlord.php";
   
   // 🛠️ ĐƯỜNG DẪN API PHÊ DUYỆT GẠCH NỢ CHỦ TRỌ
-  final String _approveUrl = "http://10.0.2.2/myapi/src/Controllers/LandlordDirectPayment.php";
+  final String _approveUrl = "http://192.168.1.250/myapi/src/Controllers/LandlordDirectPayment.php";
 
   @override
   void initState() {

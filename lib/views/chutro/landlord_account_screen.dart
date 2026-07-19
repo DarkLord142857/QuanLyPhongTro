@@ -34,7 +34,7 @@ class _LandlordAccountScreenState extends State<LandlordAccountScreen> {
 // 🟢 HÀM GỌI API LẤY HỌ TÊN CHỦ TRỌ TỪ FILE GetLandlordInfo.php
   Future<void> _fetchLandlordName() async {
     try {
-      final String url = 'http://10.0.2.2/myapi/src/Controllers/GetLandlordInfo.php?id=${widget.landlordId}'; //[cite: 6, 7]
+      final String url = 'http://192.168.1.250/myapi/src/Controllers/GetLandlordInfo.php?id=${widget.landlordId}'; //[cite: 6, 7]
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -121,13 +121,7 @@ class _LandlordAccountScreenState extends State<LandlordAccountScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text("Tài khoản & Quản lý", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-        backgroundColor: const Color(0xFF10B981),
-        foregroundColor: Colors.white,
-        centerTitle: true,
-        elevation: 0,
-      ),
+      // AppBar đã được quản lý bởi LandlordMainScreen
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -319,22 +313,26 @@ class _LandlordAccountScreenState extends State<LandlordAccountScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.015), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(color: iconColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-          child: Icon(icon, color: iconColor, size: 22),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          leading: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: iconColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: Color(0xFF1E293B))),
+          subtitle: Text(subtitle, style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)), maxLines: 1, overflow: TextOverflow.ellipsis),
+          trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
+          onTap: onTap,
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: Color(0xFF1E293B))),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)), maxLines: 1, overflow: TextOverflow.ellipsis),
-        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
-        onTap: onTap,
       ),
     );
   }
@@ -367,8 +365,8 @@ class _ProfileEditSubScreenState extends State<_ProfileEditSubScreen> {
 // 🌐 HÀM GỌI API LẤY THÔNG TIN CHỦ TRỌ TỪ BACKEND
       Future<void> _fetchLandlordData() async {
         try {
-          // Địa chỉ API kết nối tới Laragon (Sử dụng IP 10.0.2.2 cho máy ảo Android)
-          final String url = 'http://10.0.2.2/myapi/src/Controllers/GetLandlordInfo.php?id=${widget.landlordId}';
+          // Địa chỉ API kết nối tới Laragon (Sử dụng IP 192.168.1.250 cho máy ảo Android)
+          final String url = 'http://192.168.1.250/myapi/src/Controllers/GetLandlordInfo.php?id=${widget.landlordId}';
           
           final response = await http.get(Uri.parse(url));
 
@@ -407,7 +405,7 @@ class _ProfileEditSubScreenState extends State<_ProfileEditSubScreen> {
           setState(() => _isSaving = true); 
 
           try {
-            final String url = 'http://10.0.2.2/myapi/src/Controllers/UpdateLandlordInfo.php';
+            final String url = 'http://192.168.1.250/myapi/src/Controllers/UpdateLandlordInfo.php';
             
             final Map<String, dynamic> updateData = {
               "id": widget.landlordId,

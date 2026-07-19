@@ -33,7 +33,7 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
   Future<void> _fetchRoomDetail() async {
     try {
       // 🛠️ ĐÃ ĐỒNG BỘ: Link API kết nối đến máy chủ Laragon của bạn
-      final url = Uri.parse('http://10.0.2.2/myapi/src/Controllers/RoomDetailController.php?room_id=${widget.roomId}');
+      final url = Uri.parse('http://192.168.1.250/myapi/src/Controllers/RoomDetailController.php?room_id=${widget.roomId}');
       final response = await http.get(url).timeout(const Duration(seconds: 10));
       final data = jsonDecode(response.body);
 
@@ -116,23 +116,22 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
       );
     }
 
-    // 🛠️ ÉP BIẾN CHUẨN ĐỒNG BỘ KEY JSON TỪ API PHP TRẢ VỀ
+    // 🛠️ ÉP BIẾN CHUẨN ĐỒNG BỘ KEY JSON TỪ API PHP TRẢ VỀ (Hỗ trợ cả 2 định dạng)
     final room = _roomDetail!;
-    final String roomNumber = room['RoomNumber']?.toString() ?? 'Không rõ';
-    final String houseName = room['HouseName'] ?? 'Tên nhà trọ';
-    final double price = (room['Price'] ?? 0).toDouble();
-    final String address = room['Address'] ?? 'Chưa cập nhật địa chỉ';
-    final int maxPeople = room['MaxPeople'] ?? 0;
-    final int maxVehicles = room['MaxVehicles'] ?? 0;
+    final String roomNumber = (room['SoPhong'] ?? room['RoomNumber'])?.toString() ?? 'Không rõ';
+    final String houseName = room['HouseName'] ?? room['TenNha'] ?? 'Nhà trọ';
+    final double price = (room['GiaPhong'] ?? room['Price'] ?? 0).toDouble();
+    final String address = room['Address'] ?? room['DiaChi'] ?? 'Chưa cập nhật địa chỉ';
+    final int maxPeople = room['SoNguoiToiDa'] ?? room['MaxPeople'] ?? 0;
+    final int maxVehicles = room['SoLuongXeToiDa'] ?? room['MaxVehicles'] ?? 0;
     final String legalDocuments = room['LegalDocuments'] ?? 'Chưa có thông tin pháp lý';
     
-    // 🛠️ ĐÃ THÊM: Lấy mã quản lý (ID chủ trọ) từ API phòng trọ, mặc định dự phòng là 2 (chutro_lan)
+    // 🛠️ ĐÃ THÊM: Lấy mã quản lý (ID chủ trọ) từ API phòng trọ
     final int landlordId = room['MaQL'] != null ? int.tryParse(room['MaQL'].toString()) ?? 2 : 2;
 
     // Ép kiểu mảng an toàn không lo null cho hình ảnh và thuộc tính tiện ích tiện nghi
-    final detail = _roomDetail!;
-    final List<dynamic> imagesList = _parseImagesList(detail['Images']); // An toàn xử lý cả String và List
-    final List<dynamic> attributes = room['Attributes'] ?? [];
+    final List<dynamic> imagesList = _parseImagesList(room['DanhSachHinhAnh'] ?? room['Images']); 
+    final List<dynamic> attributes = room['DanhSachThuocTinh'] ?? room['Attributes'] ?? [];
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -162,10 +161,15 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                         },
                         itemBuilder: (context, index) {
                          // Ép kiểu phần tử từ API về dạng chuỗi văn bản thuần (URL String)
-                            final String rawUrl = imagesList[index].toString().trim();
+                            String rawUrl = imagesList[index].toString().trim();
 
                             if (rawUrl.isEmpty) {
                               return _buildDetailPlaceholder();
+                            }
+
+                            // 🛠️ ĐÃ SỬA: Kiểm tra nếu chỉ là tên file thì thêm tiền tố URL
+                            if (!rawUrl.startsWith('http')) {
+                              rawUrl = 'http://192.168.1.250/myapi/uploads/$rawUrl';
                             }
 
                             // Hiển thị trực tiếp ảnh từ URL mạng thông qua Image.network
@@ -300,13 +304,13 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         Text(
-                                          attr['name'] ?? '',
+                                          (attr['TenThuocTinh'] ?? attr['name'] ?? '').toString(),
                                           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                         Text(
-                                          "${attr['value']} ${attr['unit']}".trim(),
+                                          "${attr['GiaTriThucTe'] ?? attr['value'] ?? ''} ${attr['DonVi'] ?? attr['unit'] ?? ''}".trim(),
                                           style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -441,7 +445,7 @@ class _LandlordInfoWidgetState extends State<_LandlordInfoWidget> {
   Future<void> _fetchLandlordInfo() async {
     try {
       // 🛠️ ĐỒNG BỘ ĐƯỜNG DẪN: Kết nối trực tiếp đến API get_landlord_info.php của bạn trên Laragon
-      final url = Uri.parse('http://10.0.2.2/myapi/src/Controllers/GetLandLordInfo.php?id=${widget.landlordId}');
+      final url = Uri.parse('http://192.168.1.250/myapi/src/Controllers/GetLandLordInfo.php?id=${widget.landlordId}');
       final response = await http.get(url).timeout(const Duration(seconds: 10));
       final data = jsonDecode(response.body);
 

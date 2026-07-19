@@ -32,7 +32,7 @@ class _RequestServiceScreenState extends State<RequestServiceScreen> {
     if (!_formKey.currentState!.validate()) return;
     
     setState(() => _isSubmitting = true);
-    final String url = 'http://10.0.2.2/myapi/src/Controllers/CreateIncident.php';
+    final String url = 'http://192.168.1.250/myapi/src/Controllers/CreateIncident.php';
 
     try {
       final response = await http.post(

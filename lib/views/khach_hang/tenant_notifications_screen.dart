@@ -30,7 +30,7 @@ class _TenantNotificationsScreenState extends State<TenantNotificationsScreen> {
       _errorMsg = '';
     });
 
-    final String url = 'http://10.0.2.2/myapi/src/Controllers/GetTenantNotifications.php?user_id=${widget.userId}';
+    final String url = 'http://192.168.1.250/myapi/src/Controllers/GetTenantNotifications.php?user_id=${widget.userId}';
     try {
       final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
       final res = json.decode(response.body);
@@ -65,7 +65,7 @@ class _TenantNotificationsScreenState extends State<TenantNotificationsScreen> {
       // Nếu thông báo này vốn đã xem từ trước (trangThai == 1), bỏ qua không làm lại
       if (_notifications[index]['trangThai'] == 1) return;
 
-      final String url = 'http://10.0.2.2/myapi/src/Controllers/UpdateNotificationStatus.php';
+      final String url = 'http://192.168.1.250/myapi/src/Controllers/UpdateNotificationStatus.php';
       
       // Bước 1: Cập nhật giao diện Local lập tức để xóa chấm đỏ trên dòng này
       setState(() {
